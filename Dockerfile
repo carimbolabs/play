@@ -72,7 +72,6 @@ RUN <<EOF
 set -eux
 conan install ..  --output-folder=. --build=missing --profile=webassembly --settings compiler.cppstd=20 --settings build_type=Release
 cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release
 EOF
 
 # FROM golang:1.21
