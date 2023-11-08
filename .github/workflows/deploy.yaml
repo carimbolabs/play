@@ -22,9 +22,6 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
@@ -35,9 +32,12 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      - name: Configure Docker
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate Docker
         run: |
-          gcloud auth configure-docker ${{ secrets.REGISTRY }}
+          gcloud auth configure-docker --quiet gcr.io
 
       - name: Deploy to Cloud Run
         run: |
@@ -53,6 +53,6 @@ jobs:
         with:
           context: .
           push: true
-          tags: ${{ secrets.REGISTRY }}/run:latest
-          cache-from: type=registry,ref=${{ secrets.REGISTRY }}/run:buildcache
-          cache-to: type=registry,ref=${{ secrets.REGISTRY }}/run:buildcache,mode=max
+          tags: ${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:latest
+          cache-from: type=registry,ref=${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:buildcache
+          cache-to: type=registry,ref=${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:buildcache,mode=max

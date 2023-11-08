@@ -10,17 +10,17 @@ apt-get install -y build-essential software-properties-common cmake git wget
 apt-get install -y libssl-dev libffi-dev libbz2-dev libncurses-dev libncursesw5-dev libgdbm-dev liblzma-dev libsqlite3-dev tk-dev libgdbm-compat-dev libreadline-dev
 EOF
 
-WORKDIR /opt/python
-RUN <<EOF
-set -eux
-wget -qO- https://www.python.org/ftp/python/3.11.6/Python-3.11.6.tgz | tar --extract --verbose --gzip --strip-components=1
-./configure
-make -j$(nproc)
-make install
-python3 --version
-EOF
+# WORKDIR /opt/python
+# RUN <<EOF
+# set -eux
+# wget -qO- https://www.python.org/ftp/python/3.11.6/Python-3.11.6.tgz | tar --extract --verbose --gzip --strip-components=1
+# ./configure
+# make -j$(nproc)
+# make install
+# python3 --version
+# EOF
 
-RUN rm -rf /opt/python
+# RUN rm -rf /opt/python
 
 # WORKDIR /opt/node
 # RUN <<EOF
