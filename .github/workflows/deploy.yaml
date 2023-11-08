@@ -37,7 +37,7 @@ jobs:
 
       - name: Authenticate Docker
         run: |
-          gcloud auth configure-docker --quiet gcr.io
+          gcloud auth configure-docker --quiet pkg.dev
 
       - name: Deploy to Cloud Run
         run: |
