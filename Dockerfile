@@ -1,34 +1,32 @@
 FROM ubuntu:jammy
 
-# RUN apt-get update && apt-get install -y \
-#   build-essential \
-#   cmake \
-#   git \
-#   python3 \
-#   python3-pip \
-#   wget \
-#   zip
+RUN apt-get update && apt-get upgrade -y && apt-get install -y build-essential cmake git python3 python3-pip wget zip
+RUN pip install conan
+RUN conan profile detect
 
-RUN <<EOF
-apt-get update
-apt-get upgrade -y
-apt-get install -y build-essential cmake git python3 python3-pip wget zip
-pip install conan
-conan profile detect
-EOF
+#COPY profile ~/.conan2/profiles/webassembly
 
-#RUN pip install conan
-#RUN conan profile detect
-# RUN conan profile update settings.compiler.libcxx=libstdc++17 default
-#RUN cat ~/.conan2/profiles/default
-#RUN conan create --profile webassembly --build=missing  ~/.conan/profiles/webassembly
-#RUN conan profile update settings.arch=wasm settings.os=Emscripten tools-requires=emsdk/3.1.44 default
-#RUN cat ~/.conan/profiles/webassembly
+RUN printf '\n\
+  include(default) \n\
+  \n\
+  [settings] \n\
+  arch=wasm \n\
+  os=Emscripten \n\
+  \n\
+  [tool_requires] \n\
+  *: emsdk/3.1.44' > ~/.conan2/profiles/webassembly
 
-#~/.conan2/profiles/wasm
+RUN ls -la ~/.conan2/profiles
+RUN cat ~/.conan2/profiles/webassembly
 
 WORKDIR /opt
 
-#RUN sleep infinity
+RUN git clone --depth 1 https://github.com/carimbolabs/carimbo.git
 
-# printf "[settings]\narch=x86\nbuild_type=Debug\n...." > /home/user/.conan/profiles/default
+WORKDIR /opt/carimbo/build
+
+RUN conan install ..  --output-folder=. --build=missing --profile=webassembly --settings compiler.cppstd=20 --settings build_type=Release
+
+RUN cmake .. -DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake" -DCMAKE_BUILD_TYPE=Release
+
+RUN cmake --build . --config Release --jobs $(nproc)
