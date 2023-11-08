@@ -1,6 +1,6 @@
 FROM ubuntu:jammy
 
-RUN apt-get update && apt-get upgrade -y && apt-get install -y build-essential cmake git python3 python3-pip wget zip
+RUN apt-get update && apt-get upgrade -y && apt-get install -y build-essential cmake git python3 python3-pip nodejs wget zip
 RUN pip install conan
 RUN conan profile detect
 
