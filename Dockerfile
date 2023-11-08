@@ -1,5 +1,8 @@
+FROM go:1.23
+
 FROM ubuntu:jammy
 
+# FROM build
 RUN apt-get update && apt-get upgrade -y && apt-get install -y build-essential cmake git python3 python3-pip wget zip
 RUN pip install conan
 RUN conan profile detect
