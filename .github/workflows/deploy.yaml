@@ -22,6 +22,9 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
@@ -34,8 +37,18 @@ jobs:
 
       - name: Deploy to Cloud Run
         run: |
-          gcloud config set run/region ${{ secrets.REGION }}
-          gcloud config set builds/use_kaniko True
-          gcloud config set app/cloud_build_timeout 900
-          gcloud run deploy ${{ secrets.SERVICE_NAME }} --source $(pwd) --platform managed --allow-unauthenticated
-          gcloud run services update-traffic ${{ secrets.SERVICE_NAME }} --to-latest
+          docker buildx build -t play .
+          # gcloud config set run/region ${{ secrets.REGION }}
+          # gcloud config set builds/use_kaniko True
+          # gcloud config set app/cloud_build_timeout 900
+          # gcloud run deploy ${{ secrets.SERVICE_NAME }} --source $(pwd) --platform managed --allow-unauthenticated
+          # gcloud run services update-traffic ${{ secrets.SERVICE_NAME }} --to-latest
+
+      # - name: Build and push
+      #   uses: docker/build-push-action@v5
+      #   with:
+      #     context: .
+      #     push: true
+      #     tags: user/app:latest
+      #     cache-from: type=registry,ref=user/app:buildcache
+      #     cache-to: type=registry,ref=user/app:buildcache,mode=max
