@@ -35,20 +35,24 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
+      - name: Configure Docker
+        run: |
+          gcloud auth configure-docker ${{ secrets.REGISTRY }}
+
       - name: Deploy to Cloud Run
         run: |
-          docker buildx build -t play .
+          # docker buildx build -t play .
           # gcloud config set run/region ${{ secrets.REGION }}
           # gcloud config set builds/use_kaniko True
           # gcloud config set app/cloud_build_timeout 900
           # gcloud run deploy ${{ secrets.SERVICE_NAME }} --source $(pwd) --platform managed --allow-unauthenticated
           # gcloud run services update-traffic ${{ secrets.SERVICE_NAME }} --to-latest
 
-      # - name: Build and push
-      #   uses: docker/build-push-action@v5
-      #   with:
-      #     context: .
-      #     push: true
-      #     tags: user/app:latest
-      #     cache-from: type=registry,ref=user/app:buildcache
-      #     cache-to: type=registry,ref=user/app:buildcache,mode=max
+      - name: Build and push
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ secrets.REGISTRY }}/run:latest
+          cache-from: type=registry,ref=${{ secrets.REGISTRY }}/run:buildcache
+          cache-to: type=registry,ref=${{ secrets.REGISTRY }}/run:buildcache,mode=max

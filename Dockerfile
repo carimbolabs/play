@@ -22,44 +22,44 @@ EOF
 
 RUN rm -rf /opt/python
 
-WORKDIR /opt/node
-RUN <<EOF
-set -eux
-wget -qO- https://nodejs.org/dist/latest-v20.x/node-v20.9.0.tar.gz | tar --extract --verbose --gzip --strip-components=1
-./configure
-make -j$(nproc)
-make install
-node --version
-EOF
+# WORKDIR /opt/node
+# RUN <<EOF
+# set -eux
+# wget -qO- https://nodejs.org/dist/latest-v20.x/node-v20.9.0.tar.gz | tar --extract --verbose --gzip --strip-components=1
+# ./configure
+# make -j$(nproc)
+# make install
+# node --version
+# EOF
 
-RUN rm -rf /opt/node
+# RUN rm -rf /opt/node
 
-RUN <<-EOF
-set -eux
-python3 -m pip install conan
-conan profile detect
+# RUN <<-EOF
+# set -eux
+# python3 -m pip install conan
+# conan profile detect
 
-cat <<PROFILE > ~/.conan2/profiles/webassembly
-include(default)
+# cat <<PROFILE > ~/.conan2/profiles/webassembly
+# include(default)
 
-[settings]
-arch=wasm
-os=Emscripten
+# [settings]
+# arch=wasm
+# os=Emscripten
 
-[tool_requires]
-*: emsdk/3.1.44
-PROFILE
-EOF
+# [tool_requires]
+# *: emsdk/3.1.44
+# PROFILE
+# EOF
 
-WORKDIR /opt
-RUN git clone --depth 1 https://github.com/carimbolabs/carimbo.git
-WORKDIR /opt/carimbo/build
-RUN <<EOF
-set -eux
-conan install ..  --output-folder=. --build=missing --profile=webassembly --settings compiler.cppstd=20 --settings build_type=Release
-cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
-cmake --build . --config Release
-EOF
+# WORKDIR /opt
+# RUN git clone --depth 1 https://github.com/carimbolabs/carimbo.git
+# WORKDIR /opt/carimbo/build
+# RUN <<EOF
+# set -eux
+# conan install ..  --output-folder=. --build=missing --profile=webassembly --settings compiler.cppstd=20 --settings build_type=Release
+# cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
+# cmake --build . --config Release
+# EOF
 
 # FROM golang:1.21
 # WORKDIR /opt
