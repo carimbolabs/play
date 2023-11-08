@@ -43,7 +43,7 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
+          push: false
           tags: ${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:latest
-          cache-from: type=registry,ref=${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:buildcache
-          cache-to: type=registry,ref=${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:buildcache,mode=max
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

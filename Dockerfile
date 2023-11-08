@@ -1,7 +1,4 @@
-ARG DISTRO=debian
-ARG DISTRO_VERSION=bookworm-slim
-
-FROM ${DISTRO}:${DISTRO_VERSION}
+FROM debian:bookworm-slim
 
 # ARG DEBIAN_FRONTEND=noninteractive
 
@@ -9,7 +6,7 @@ RUN <<EOF
 set -eux
 apt-get update
 # apt-get upgrade -y
-apt-get install -y build-essential software-properties-common cmake git # wget
+apt-get install -y build-essential cmake git # wget software-properties-common
 # apt-get install -y libssl-dev libffi-dev libbz2-dev libncurses-dev libncursesw5-dev libgdbm-dev liblzma-dev libsqlite3-dev tk-dev libgdbm-compat-dev libreadline-dev
 EOF
 
@@ -27,17 +24,13 @@ EOF
 
 #COPY --from=python:3.11-slim-bullseye /usr/local/bin /usr/local/bin
 
-COPY --from=node:20-${DISTRO_VERSION} /usr/local/bin/node /usr/local/bin/node
-COPY --from=node:20-${DISTRO_VERSION} /usr/local/include/node /usr/local/include/node
-COPY --from=node:20-${DISTRO_VERSION} /usr/local/lib/node_modules /usr/local/lib/node_modules
+COPY --from=node:20-bookworm /usr/local/bin/node /usr/local/bin/node
+COPY --from=node:20-bookworm /usr/local/include/node /usr/local/include/node
+COPY --from=node:20-bookworm /usr/local/lib/node_modules /usr/local/lib/node_modules
 
-COPY --from=python:-${DISTRO_VERSION} /usr/local/bin/python3 /usr/local/bin/python3
-COPY --from=python-${DISTRO_VERSION} /usr/local/bin/python3.11 /usr/local/bin/python3.11
-COPY --from=python-${DISTRO_VERSION} /usr/local/bin/python /usr/local/bin/python
-
-COPY --from=python-${DISTRO_VERSION} /usr/local/lib/python3.8 /usr/local/lib/python3.8
-COPY --from=python-${DISTRO_VERSION} /usr/local/lib/libpython3.11.so.1.0 /usr/local/lib/libpython3.11.so.1.0
-COPY --from=python-${DISTRO_VERSION} /usr/local/lib/libpython3.so /usr/local/lib/libpython3.so
+COPY --from=python:3.11-bookworm /usr/local/bin/python3 /usr/local/bin/python3
+COPY --from=python:3.11-bookworm /usr/local/lib/python3.11 /usr/local/lib/python3.11
+COPY --from=python:3.11-bookworm /usr/local/lib/libpython3.11.so.1.0 /usr/local/lib/libpython3.11.so.1.0
 
 
 # WORKDIR /opt/node
@@ -52,8 +45,8 @@ COPY --from=python-${DISTRO_VERSION} /usr/local/lib/libpython3.so /usr/local/lib
 
 # RUN rm -rf /opt/node
 
-COPY --from=node:20-slim /usr/local/bin /usr/local/bin
-COPY --from=node:20-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
+# COPY --from=node:20-slim /usr/local/bin /usr/local/bin
+# COPY --from=node:20-slim /usr/local/lib/node_modules /usr/local/lib/node_modules
 
 RUN <<-EOF
 set -eux
@@ -79,7 +72,7 @@ RUN <<EOF
 set -eux
 conan install ..  --output-folder=. --build=missing --profile=webassembly --settings compiler.cppstd=20 --settings build_type=Release
 cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
-# cmake --build . --config Release
+cmake --build . --config Release
 EOF
 
 # FROM golang:1.21
