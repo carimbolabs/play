@@ -1,11 +1,8 @@
 FROM ubuntu:jammy
 
-# FROM build
 RUN apt-get update && apt-get upgrade -y && apt-get install -y build-essential cmake git python3 python3-pip wget zip
 RUN pip install conan
 RUN conan profile detect
-
-#COPY profile ~/.conan2/profiles/webassembly
 
 RUN printf '\n\
   include(default) \n\
@@ -28,11 +25,11 @@ WORKDIR /opt/carimbo/build
 
 RUN conan install ..  --output-folder=. --build=missing --profile=webassembly --settings compiler.cppstd=20 --settings build_type=Release
 
-RUN cmake .. -DCMAKE_TOOLCHAIN_FILE="conan_toolchain.cmake" -DCMAKE_BUILD_TYPE=Release
+RUN cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
 
-RUN cmake --build . --config Release --jobs $(nproc)
+RUN cmake --build . --config Release
 
-FROM golang:1.21
+# FROM golang:1.21
 # WORKDIR /opt
 # COPY go.mod .
 # COPY go.sum .
