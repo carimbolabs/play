@@ -10,32 +10,29 @@ import (
 )
 
 type Message struct {
-	Text string `json:"message"`
+	Stdout string `json:"stdout"`
+	Stderr string `json:"stderr"`
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("cmake", "--build", ".")
+	cmd.Dir = "/opt/carimbo/build"
+	var stdout, stderr bytes.Buffer
 
-	var out bytes.Buffer
+	cmd.Stdout = &stdout
+	cmd.Stderr = &stderr
+	cmd.Run()
+	// err := cmd.Run()
+	// if err != nil {
+	// 	w.Header().Set("Content-Type", "application/json")
+	// 	json.NewEncoder(w).Encode(message)
 
-	cmd.Stdout = &out
-
-	err := cmd.Run()
-	if err != nil {
-		message := Message{
-			Text: err.Error(),
-		}
-
-		w.Header().Set("Content-Type", "application/json")
-		json.NewEncoder(w).Encode(message)
-
-		return
-	}
-
-	output := out.String()
+	// 	return
+	// }
 
 	message := Message{
-		Text: output,
+		Stdout: stdout.String(),
+		Stderr: stderr.String(),
 	}
 
 	w.Header().Set("Content-Type", "application/json")
