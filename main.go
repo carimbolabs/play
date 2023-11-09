@@ -16,20 +16,23 @@ type Message struct {
 func handler(w http.ResponseWriter, r *http.Request) {
 	cmd := exec.Command("cmake", "--build", ".")
 
-	var (
-		out    bytes.Buffer
-		output string
-	)
+	var out bytes.Buffer
 
 	cmd.Stdout = &out
 
 	err := cmd.Run()
 	if err != nil {
-		fmt.Println("Error:", err)
+		message := Message{
+			Text: err.Error(),
+		}
+
+		w.Header().Set("Content-Type", "application/json")
+		json.NewEncoder(w).Encode(message)
+
 		return
 	}
 
-	output = out.String()
+	output := out.String()
 
 	message := Message{
 		Text: output,
