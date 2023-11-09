@@ -50,4 +50,4 @@ EOF
 
 WORKDIR /opt
 COPY --from=0 /opt/app .
-ENTRYPOINT app
+ENTRYPOINT /opt/app
