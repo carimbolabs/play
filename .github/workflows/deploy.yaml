@@ -49,13 +49,12 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Deploy
+        id: deploy
         uses: google-github-actions/deploy-cloudrun@v1
         with:
           service: ${{ secrets.SERVICE_NAME }}
           image: ${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:latest
           region: ${{ secrets.REGION }}
-          platform: managed
-          allow-unauthenticated: true
 
       - name: "Check deployment"
         run: curl -fsS -m 10 --retry 5 -o /dev/null "${{ steps.deploy.outputs.url }}"
