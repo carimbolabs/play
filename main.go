@@ -1,10 +1,12 @@
 package main
 
 import (
+	"bytes"
 	"encoding/json"
 	"fmt"
 	"net/http"
 	"os"
+	"os/exec"
 )
 
 type Message struct {
@@ -12,8 +14,25 @@ type Message struct {
 }
 
 func handler(w http.ResponseWriter, r *http.Request) {
+	cmd := exec.Command("cmake", "--build", ".")
+
+	var (
+		out    bytes.Buffer
+		output string
+	)
+
+	cmd.Stdout = &out
+
+	err := cmd.Run()
+	if err != nil {
+		fmt.Println("Error:", err)
+		return
+	}
+
+	output = out.String()
+
 	message := Message{
-		Text: "Hello, world!",
+		Text: output,
 	}
 
 	w.Header().Set("Content-Type", "application/json")
