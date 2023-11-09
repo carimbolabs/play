@@ -40,14 +40,14 @@ conan install ..  --output-folder=. --build=missing --profile=webassembly --sett
 cmake .. -DCMAKE_TOOLCHAIN_FILE=conan_toolchain.cmake -DCMAKE_BUILD_TYPE=Release
 EOF
 
-# FROM golang:1.21
-# WORKDIR /opt
-# COPY go.mod .
-# COPY go.sum .
-# RUN go mod download
-# COPY . .
-# RUN CGO_ENABLED=0 go build -ldflags="-s -w" -trimpath -o app
+FROM golang:1.21
+WORKDIR /opt
+COPY go.mod .
+COPY go.sum .
+RUN go mod download
+COPY . .
+RUN CGO_ENABLED=0 go build -ldflags="-s -w" -trimpath -o app
 
-# FROM gcr.io/distroless/static-debian12
-# COPY --from=0 /opt/app /
-# CMD ["/app"]
+FROM gcr.io/distroless/static-debian12
+COPY --from=1 /opt/app /
+CMD ["/app"]
