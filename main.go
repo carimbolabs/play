@@ -118,10 +118,19 @@ func handler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "text/html")
-	fmt.Printf("Runtime: %+v\n", runtime.Script)
-	html = []byte(strings.ReplaceAll(string(html), "{{script}}", runtime.Script))
+	if strings.HasSuffix(r.URL.Path, ".js") {
+		w.Header().Set("Content-Type", "text/javascript")
+		w.Write([]byte(runtime.Script))
+		return
+	}
 
+	if strings.HasSuffix(r.URL.Path, ".wasm") {
+		w.Header().Set("Content-Type", "application/wasm")
+		w.Write([]byte(runtime.Binary))
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html")
 	w.Write(html)
 }
 
