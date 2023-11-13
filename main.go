@@ -183,21 +183,7 @@ func getRuntimeFromURL(urlPath string) string {
 func serveStaticFile(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	w.Header().Set("Content-Type", contentType)
-	w.Header().Set("Content-Encoding", "gzip")
-	w.Header().Set("Vary", "Accept-Encoding")
-
-	var compressedData bytes.Buffer
-	writer := gzip.NewWriter(&compressedData)
-	defer writer.Close()
-
-	_, err := writer.Write(data)
-	if err != nil {
-		http.Error(w, "[writer.Write]: error %v", http.StatusInternalServerError)
-		return
-	}
-
-	writer.Flush()
-	w.Write(compressedData.Bytes())
+	w.Write(data)
 }
 
 func javaScriptHandler(w http.ResponseWriter, r *http.Request) {
@@ -259,8 +245,38 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
+type gzipResponseWriter struct {
+	http.ResponseWriter
+	writer *gzip.Writer
+}
+
+// Write implementa o método Write da interface http.ResponseWriter.
+func (w *gzipResponseWriter) Write(b []byte) (int, error) {
+	return w.writer.Write(b)
+}
+
+// GzipMiddleware é um middleware que comprime o conteúdo usando gzip se o cliente aceitar.
+func GzipMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+			w.Header().Set("Content-Encoding", "gzip")
+			w.Header().Set("Vary", "Accept-Encoding")
+
+			writer := gzip.NewWriter(w)
+			defer writer.Close()
+
+			w = &gzipResponseWriter{
+				ResponseWriter: w,
+				writer:         writer,
+			}
+		}
+
+		next.ServeHTTP(w, r)
+	})
+}
+
 func main() {
-	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/", GzipMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		path := r.URL.Path
 
 		switch {
@@ -275,7 +291,7 @@ func main() {
 		default:
 			rootHandler(w, r)
 		}
-	})
+	})))
 
 	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", os.Getenv("PORT")), nil))
 }
