@@ -58,7 +58,7 @@ func removeRootDirFromZip(zipData []byte) ([]byte, error) {
 	writer := zip.NewWriter(&modifiedZipBuffer)
 
 	for _, file := range reader.File {
-		file.Name = strings.Join(strings.Split(file.Name, "/")[1:], "/")
+		file.Name = filepath.Join(strings.Split(file.Name, "/")[1:]...)
 
 		destFile, err := writer.Create(file.Name)
 		if err != nil {
