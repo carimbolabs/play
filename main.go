@@ -11,10 +11,22 @@ import (
 	"os"
 	"regexp"
 	"strings"
+	"sync"
 )
 
 //go:embed index.html
 var html []byte
+
+type Cache struct {
+	sync.Mutex
+	runtimes map[string]Runtime
+}
+
+var cache Cache
+
+func init() {
+	cache.runtimes = make(map[string]Runtime)
+}
 
 type Runtime struct {
 	Script string
@@ -69,6 +81,14 @@ func removeRootDirFromZip(zipData []byte) ([]byte, error) {
 }
 
 func fetchRuntime(runtime string) (Runtime, error) {
+	cache.Lock()
+	defer cache.Unlock()
+
+	if cached, ok := cache.runtimes[runtime]; ok {
+		fmt.Printf("Runtime %s found in cache\n", runtime)
+		return cached, nil
+	}
+
 	url := fmt.Sprintf("https://github.com/carimbolabs/carimbo/releases/download/v%s/WebAssembly.zip", runtime)
 
 	resp, err := http.Get(url)
@@ -103,7 +123,9 @@ func fetchRuntime(runtime string) (Runtime, error) {
 		}
 	}
 
-	return Runtime{Script: string(scriptContent), Binary: string(binaryContent)}, nil
+	r := Runtime{Script: string(scriptContent), Binary: string(binaryContent)}
+	cache.runtimes[runtime] = r
+	return r, nil
 }
 
 func fetchBundle(org, repo, release string) ([]byte, error) {
