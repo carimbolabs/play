@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"compress/gzip"
 	_ "embed"
 	"fmt"
 	"io"
@@ -182,7 +183,21 @@ func getRuntimeFromURL(urlPath string) string {
 func serveStaticFile(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	w.Header().Set("Content-Type", contentType)
-	w.Write(data)
+	w.Header().Set("Content-Encoding", "gzip")
+	w.Header().Set("Vary", "Accept-Encoding")
+
+	var compressedData bytes.Buffer
+	writer := gzip.NewWriter(&compressedData)
+	defer writer.Close()
+
+	_, err := writer.Write(data)
+	if err != nil {
+		http.Error(w, "[writer.Write]: error %v", http.StatusInternalServerError)
+		return
+	}
+
+	writer.Flush()
+	w.Write(compressedData.Bytes())
 }
 
 func javaScriptHandler(w http.ResponseWriter, r *http.Request) {
@@ -229,13 +244,6 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
-
-	// var protocol string
-	// if r.TLS == nil {
-	// 	protocol = "http"
-	// } else {
-	// 	protocol = "https"
-	// }
 
 	baseURL := fmt.Sprintf("%s/", strings.TrimRight(path.Clean(r.URL.Path), "/"))
 
