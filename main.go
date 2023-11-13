@@ -227,15 +227,18 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
-		if strings.HasSuffix(r.URL.Path, ".js") {
+		path := r.URL.Path
+
+		switch {
+		case strings.HasSuffix(path, ".js"):
 			javaScriptHandler(w, r)
-		} else if strings.HasSuffix(r.URL.Path, ".wasm") {
+		case strings.HasSuffix(path, ".wasm"):
 			webAssemblyHandler(w, r)
-		} else if strings.HasSuffix(r.URL.Path, ".zip") {
+		case strings.HasSuffix(path, ".zip"):
 			bundleHandler(w, r)
-		} else if strings.HasSuffix(r.URL.Path, ".ico") {
+		case strings.HasSuffix(path, ".ico"):
 			favIconHandler(w, r)
-		} else {
+		default:
 			rootHandler(w, r)
 		}
 	})
