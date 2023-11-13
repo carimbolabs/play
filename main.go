@@ -135,6 +135,7 @@ func jsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	w.Header().Set("Content-Type", "application/javascript")
 	w.Write([]byte(runtime.Script))
 }
@@ -146,6 +147,7 @@ func wasmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	w.Header().Set("Content-Type", "application/wasm")
 	w.Write([]byte(runtime.Binary))
 }
@@ -158,6 +160,7 @@ func zipHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	w.Header().Set("Content-Type", "application/zip")
 	w.Write(bundle)
 }
