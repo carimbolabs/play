@@ -193,6 +193,12 @@ func getRuntimeFromURL(urlPath string) string {
 	return runtime
 }
 
+func faviconHandler(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.Header().Set("Content-Type", "image/x-icon")
+	w.Write([]byte{})
+}
+
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	w.Write(html)
@@ -206,6 +212,8 @@ func main() {
 			wasmHandler(w, r)
 		} else if strings.HasSuffix(r.URL.Path, ".zip") {
 			zipHandler(w, r)
+		} else if strings.HasSuffix(r.URL.Path, ".ico") {
+			faviconHandler(w, r)
 		} else {
 			rootHandler(w, r)
 		}
