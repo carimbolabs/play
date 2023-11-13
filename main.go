@@ -230,14 +230,14 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	var protocol string
-	if r.TLS == nil {
-		protocol = "http"
-	} else {
-		protocol = "https"
-	}
+	// var protocol string
+	// if r.TLS == nil {
+	// 	protocol = "http"
+	// } else {
+	// 	protocol = "https"
+	// }
 
-	baseURL := fmt.Sprintf("%s://%s%s/", protocol, r.Host, strings.TrimRight(path.Clean(r.URL.Path), "/"))
+	baseURL := fmt.Sprintf("%s/", strings.TrimRight(path.Clean(r.URL.Path), "/"))
 
 	data := struct {
 		BaseURL string
