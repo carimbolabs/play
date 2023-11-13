@@ -88,7 +88,7 @@ func fetchRuntime(runtime string) (Runtime, error) {
 		return cached, nil
 	}
 
-	var url = fmt.Sprintf("https://github.com/carimbolabs/carimbo/releases/download/v%s/WebAssembly.zip", runtime)
+	url := fmt.Sprintf("https://github.com/carimbolabs/carimbo/releases/download/v%s/WebAssembly.zip", runtime)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -128,7 +128,7 @@ func fetchRuntime(runtime string) (Runtime, error) {
 }
 
 func fetchBundle(org, repo, release string) ([]byte, error) {
-	var url = fmt.Sprintf("https://github.com/%s/%s/archive/refs/tags/v%s.zip", org, repo, release)
+	url := fmt.Sprintf("https://github.com/%s/%s/archive/refs/tags/v%s.zip", org, repo, release)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -147,6 +147,34 @@ func fetchBundle(org, repo, release string) ([]byte, error) {
 	}
 
 	return body, nil
+}
+
+func getOrgRepoReleaseFromURL(urlPath string) (string, string, string, string) {
+	pattern := regexp.MustCompile(`/(?P<runtime>[^/]+)/(?P<org>[^/]+)/(?P<repo>[^/]+)/(?P<release>[^/]+)`)
+	match := pattern.FindStringSubmatch(urlPath)
+
+	var runtime, org, repo, release string
+	for i, name := range pattern.SubexpNames() {
+		if i != 0 && name != "" {
+			switch name {
+			case "runtime":
+				runtime = match[i]
+			case "org":
+				org = match[i]
+			case "repo":
+				repo = match[i]
+			case "release":
+				release = match[i]
+			}
+		}
+	}
+
+	return runtime, org, repo, release
+}
+
+func getRuntimeFromURL(urlPath string) string {
+	runtime, _, _, _ := getOrgRepoReleaseFromURL(urlPath)
+	return runtime
 }
 
 func serveStaticFile(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
@@ -186,35 +214,7 @@ func bundleHandler(w http.ResponseWriter, r *http.Request) {
 	serveStaticFile(w, r, "application/zip", bundle)
 }
 
-func getOrgRepoReleaseFromURL(urlPath string) (string, string, string, string) {
-	pattern := regexp.MustCompile(`/(?P<runtime>[^/]+)/(?P<org>[^/]+)/(?P<repo>[^/]+)/(?P<release>[^/]+)`)
-	match := pattern.FindStringSubmatch(urlPath)
-
-	var runtime, org, repo, release string
-	for i, name := range pattern.SubexpNames() {
-		if i != 0 && name != "" {
-			switch name {
-			case "runtime":
-				runtime = match[i]
-			case "org":
-				org = match[i]
-			case "repo":
-				repo = match[i]
-			case "release":
-				release = match[i]
-			}
-		}
-	}
-
-	return runtime, org, repo, release
-}
-
-func getRuntimeFromURL(urlPath string) string {
-	runtime, _, _, _ := getOrgRepoReleaseFromURL(urlPath)
-	return runtime
-}
-
-func faviconHandler(w http.ResponseWriter, r *http.Request) {
+func favIconHandler(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	w.Header().Set("Content-Type", "image/x-icon")
 	w.Write([]byte{})
@@ -234,7 +234,7 @@ func main() {
 		} else if strings.HasSuffix(r.URL.Path, ".zip") {
 			bundleHandler(w, r)
 		} else if strings.HasSuffix(r.URL.Path, ".ico") {
-			faviconHandler(w, r)
+			favIconHandler(w, r)
 		} else {
 			rootHandler(w, r)
 		}
