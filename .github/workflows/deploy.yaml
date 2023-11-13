@@ -62,6 +62,7 @@ jobs:
       - name: Setup Firebase Hosting
         uses: firebaseextended/action-hosting-deploy@v0
         with:
+          channelID: live
           repoToken: ${{ secrets.GITHUB_TOKEN }}
           firebaseServiceAccount: ${{ secrets.GOOGLE_CREDENTIALS }}
           projectId: ${{ secrets.GCP_PROJECT_ID }}
