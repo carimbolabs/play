@@ -6,15 +6,17 @@ import (
 	"compress/gzip"
 	_ "embed"
 	"fmt"
+	"html/template"
 	"io"
 	"log"
 	"net/http"
 	"os"
 	"path"
+	"path/filepath"
 	"regexp"
 	"strings"
 	"sync"
-	"text/template"
+	"time"
 )
 
 //go:embed index.html
@@ -39,7 +41,7 @@ type Runtime struct {
 func readZipFile(file *zip.File) ([]byte, error) {
 	rc, err := file.Open()
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to open zip file: %w", err)
 	}
 	defer rc.Close()
 
@@ -49,35 +51,33 @@ func readZipFile(file *zip.File) ([]byte, error) {
 func removeRootDirFromZip(zipData []byte) ([]byte, error) {
 	reader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to create zip reader: %w", err)
 	}
 
-	var (
-		modifiedZipBuffer bytes.Buffer
-		writer            = zip.NewWriter(&modifiedZipBuffer)
-	)
+	var modifiedZipBuffer bytes.Buffer
+	writer := zip.NewWriter(&modifiedZipBuffer)
 
 	for _, file := range reader.File {
 		file.Name = strings.Join(strings.Split(file.Name, "/")[1:], "/")
 
 		destFile, err := writer.Create(file.Name)
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to create zip file: %w", err)
 		}
 
 		srcFile, err := file.Open()
 		if err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to open zip file: %w", err)
 		}
 		defer srcFile.Close()
 
 		if _, err = io.Copy(destFile, srcFile); err != nil {
-			return nil, err
+			return nil, fmt.Errorf("failed to copy file contents: %w", err)
 		}
 	}
 
 	if err := writer.Close(); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("failed to close zip writer: %w", err)
 	}
 
 	return modifiedZipBuffer.Bytes(), nil
@@ -95,18 +95,18 @@ func fetchRuntime(runtime string) (Runtime, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return Runtime{}, fmt.Errorf("[http.Get] error: %v", err)
+		return Runtime{}, fmt.Errorf("HTTP GET error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return Runtime{}, fmt.Errorf("[io.ReadAll]: error %v", err)
+		return Runtime{}, fmt.Errorf("readAll error: %w", err)
 	}
 
 	zr, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
 	if err != nil {
-		return Runtime{}, fmt.Errorf("[zip.NewReader]: error %v", err)
+		return Runtime{}, fmt.Errorf("zip.NewReader error: %w", err)
 	}
 
 	var scriptContent, binaryContent []byte
@@ -115,12 +115,12 @@ func fetchRuntime(runtime string) (Runtime, error) {
 		case "carimbo.js":
 			scriptContent, err = readZipFile(file)
 			if err != nil {
-				return Runtime{}, fmt.Errorf("[readZipFile]: error %v", err)
+				return Runtime{}, fmt.Errorf("readZipFile error: %w", err)
 			}
 		case "carimbo.wasm":
 			binaryContent, err = readZipFile(file)
 			if err != nil {
-				return Runtime{}, fmt.Errorf("[readZipFile]: error %v", err)
+				return Runtime{}, fmt.Errorf("readZipFile error: %w", err)
 			}
 		}
 	}
@@ -135,18 +135,18 @@ func fetchBundle(org, repo, release string) ([]byte, error) {
 
 	resp, err := http.Get(url)
 	if err != nil {
-		return nil, fmt.Errorf("[http.Get] error: %v", err)
+		return nil, fmt.Errorf("HTTP GET error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("[io.ReadAll]: error %v", err)
+		return nil, fmt.Errorf("readAll error: %w", err)
 	}
 
 	body, err = removeRootDirFromZip(body)
 	if err != nil {
-		return nil, fmt.Errorf("[removeRootDirFromZip]: error %v", err)
+		return nil, fmt.Errorf("removeRootDirFromZip error: %w", err)
 	}
 
 	return body, nil
@@ -181,7 +181,6 @@ func getRuntimeFromURL(urlPath string) string {
 }
 
 func serveStaticFile(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
 	w.Header().Set("Content-Type", contentType)
 	w.Write(data)
 }
@@ -189,7 +188,7 @@ func serveStaticFile(w http.ResponseWriter, r *http.Request, contentType string,
 func javaScriptHandler(w http.ResponseWriter, r *http.Request) {
 	runtime, err := fetchRuntime(getRuntimeFromURL(r.URL.Path))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error fetching runtime: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -199,7 +198,7 @@ func javaScriptHandler(w http.ResponseWriter, r *http.Request) {
 func webAssemblyHandler(w http.ResponseWriter, r *http.Request) {
 	runtime, err := fetchRuntime(getRuntimeFromURL(r.URL.Path))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error fetching runtime: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -211,7 +210,7 @@ func bundleHandler(w http.ResponseWriter, r *http.Request) {
 	bundle, err := fetchBundle(org, repo, release)
 	if err != nil {
 		log.Printf("[fetchBundle]: error %v", err)
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error fetching bundle: %v", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -219,19 +218,17 @@ func bundleHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func favIconHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Header().Set("Content-Type", "image/x-icon")
-	w.Write([]byte{})
+	serveStaticFile(w, r, "image/x-icon", []byte{})
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.New("index").Parse(string(html))
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error parsing template: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	baseURL := fmt.Sprintf("%s/", strings.TrimRight(path.Clean(r.URL.Path), "/"))
+	baseURL := fmt.Sprintf("%s/", strings.TrimRight(filepath.Join("/", path.Clean(r.URL.Path)), "/"))
 
 	data := struct {
 		BaseURL string
@@ -240,7 +237,7 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, err.Error(), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("Error executing template: %v", err), http.StatusInternalServerError)
 		return
 	}
 }
@@ -250,48 +247,58 @@ type gzipResponseWriter struct {
 	writer *gzip.Writer
 }
 
-// Write implementa o método Write da interface http.ResponseWriter.
 func (w *gzipResponseWriter) Write(b []byte) (int, error) {
 	return w.writer.Write(b)
 }
 
-// GzipMiddleware é um middleware que comprime o conteúdo usando gzip se o cliente aceitar.
-func GzipMiddleware(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
-			w.Header().Set("Content-Encoding", "gzip")
-			w.Header().Set("Vary", "Accept-Encoding")
+type GzipHandlerFunc func(w http.ResponseWriter, r *http.Request)
 
-			writer := gzip.NewWriter(w)
-			defer writer.Close()
+func (f GzipHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Encoding", "gzip")
+	w.Header().Set("Vary", "Accept-Encoding")
 
-			w = &gzipResponseWriter{
-				ResponseWriter: w,
-				writer:         writer,
-			}
-		}
+	writer := gzip.NewWriter(w)
+	defer writer.Close()
 
-		next.ServeHTTP(w, r)
-	})
+	w = &gzipResponseWriter{
+		ResponseWriter: w,
+		writer:         writer,
+	}
+
+	f(w, r)
+}
+
+type CacheControlHandlerFunc func(w http.ResponseWriter, r *http.Request)
+
+func (f CacheControlHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
+	w.Header().Set("Last-Modified", time.Now().Format(http.TimeFormat))
+	w.Header().Set("Vary", "Accept-Encoding, User-Agent")
+
+	f(w, r)
 }
 
 func main() {
-	http.Handle("/", GzipMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		path := r.URL.Path
+	server := &http.Server{
+		Addr: fmt.Sprintf(":%s", os.Getenv("PORT")),
+		Handler: GzipHandlerFunc(CacheControlHandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			path := r.URL.Path
 
-		switch {
-		case strings.HasSuffix(path, ".js"):
-			javaScriptHandler(w, r)
-		case strings.HasSuffix(path, ".wasm"):
-			webAssemblyHandler(w, r)
-		case strings.HasSuffix(path, ".zip"):
-			bundleHandler(w, r)
-		case strings.HasSuffix(path, ".ico"):
-			favIconHandler(w, r)
-		default:
-			rootHandler(w, r)
-		}
-	})))
+			switch {
+			case strings.HasSuffix(path, ".js"):
+				javaScriptHandler(w, r)
+			case strings.HasSuffix(path, ".wasm"):
+				webAssemblyHandler(w, r)
+			case strings.HasSuffix(path, ".zip"):
+				bundleHandler(w, r)
+			case strings.HasSuffix(path, ".ico"):
+				favIconHandler(w, r)
+			default:
+				rootHandler(w, r)
+			}
+		})),
+	}
 
-	log.Fatal(http.ListenAndServe(fmt.Sprintf(":%s", os.Getenv("PORT")), nil))
+	log.Fatal(server.ListenAndServe())
 }
