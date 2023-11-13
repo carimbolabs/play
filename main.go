@@ -9,9 +9,11 @@ import (
 	"log"
 	"net/http"
 	"os"
+	"path"
 	"regexp"
 	"strings"
 	"sync"
+	"text/template"
 )
 
 //go:embed index.html
@@ -207,6 +209,7 @@ func bundleHandler(w http.ResponseWriter, r *http.Request) {
 	_, org, repo, release := getOrgRepoReleaseFromURL(r.URL.Path)
 	bundle, err := fetchBundle(org, repo, release)
 	if err != nil {
+		log.Printf("[fetchBundle]: error %v", err)
 		http.Error(w, err.Error(), http.StatusInternalServerError)
 		return
 	}
@@ -221,8 +224,31 @@ func favIconHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Type", "text/html")
-	w.Write(html)
+	tmpl, err := template.New("index").Parse(string(html))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	var protocol string
+	if r.TLS == nil {
+		protocol = "http"
+	} else {
+		protocol = "https"
+	}
+
+	baseURL := fmt.Sprintf("%s://%s%s/", protocol, r.Host, strings.TrimRight(path.Clean(r.URL.Path), "/"))
+
+	data := struct {
+		BaseURL string
+	}{
+		BaseURL: baseURL,
+	}
+
+	if err := tmpl.Execute(w, data); err != nil {
+		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
 }
 
 func main() {
