@@ -251,7 +251,7 @@ func (w *gzipResponseWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
 
-func gzipMiddleware(next http.Handler) http.Handler {
+func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Set("Vary", "Accept-Encoding")
@@ -273,7 +273,7 @@ func gzipMiddleware(next http.Handler) http.Handler {
 func main() {
 	server := &http.Server{
 		Addr: fmt.Sprintf(":%s", os.Getenv("PORT")),
-		Handler: gzipMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		Handler: Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
 
 			switch {
