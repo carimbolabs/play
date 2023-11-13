@@ -2,7 +2,7 @@
   "hosting": {
     "rewrites": [
       {
-        "source": "play.carimbo.cloud/**",
+        "source": "**",
         "run": {
           "serviceId": "play",
           "region": "us-central1",
