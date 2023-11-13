@@ -44,18 +44,21 @@ func readZipFile(file *zip.File) ([]byte, error) {
 }
 
 func removeRootDirFromZip(zipData []byte) ([]byte, error) {
-	zipReader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
+	reader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
 		return nil, err
 	}
 
-	var modifiedZipBuffer bytes.Buffer
-	zipWriter := zip.NewWriter(&modifiedZipBuffer)
+	var (
+		modifiedZipBuffer bytes.Buffer
+		writter           = zip.NewWriter(&modifiedZipBuffer)
+	)
+	defer writter.Close()
 
-	for _, file := range zipReader.File {
+	for _, file := range reader.File {
 		file.Name = strings.Join(strings.Split(file.Name, "/")[1:], "/")
 
-		destFile, err := zipWriter.Create(file.Name)
+		destFile, err := writter.Create(file.Name)
 		if err != nil {
 			return nil, err
 		}
@@ -66,15 +69,9 @@ func removeRootDirFromZip(zipData []byte) ([]byte, error) {
 		}
 		defer srcFile.Close()
 
-		_, err = io.Copy(destFile, srcFile)
-		if err != nil {
+		if _, err = io.Copy(destFile, srcFile); err != nil {
 			return nil, err
 		}
-	}
-
-	err = zipWriter.Close()
-	if err != nil {
-		return nil, err
 	}
 
 	return modifiedZipBuffer.Bytes(), nil
@@ -88,7 +85,7 @@ func fetchRuntime(runtime string) (Runtime, error) {
 		return cached, nil
 	}
 
-	url := fmt.Sprintf("https://github.com/carimbolabs/carimbo/releases/download/v%s/WebAssembly.zip", runtime)
+	var url = fmt.Sprintf("https://github.com/carimbolabs/carimbo/releases/download/v%s/WebAssembly.zip", runtime)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -122,13 +119,13 @@ func fetchRuntime(runtime string) (Runtime, error) {
 		}
 	}
 
-	r := Runtime{Script: string(scriptContent), Binary: string(binaryContent)}
-	cache.runtimes[runtime] = r
-	return r, nil
+	rt := Runtime{Script: string(scriptContent), Binary: string(binaryContent)}
+	cache.runtimes[runtime] = rt
+	return rt, nil
 }
 
 func fetchBundle(org, repo, release string) ([]byte, error) {
-	url := fmt.Sprintf("https://github.com/%s/%s/archive/refs/tags/v%s.zip", org, repo, release)
+	var url = fmt.Sprintf("https://github.com/%s/%s/archive/refs/tags/v%s.zip", org, repo, release)
 
 	resp, err := http.Get(url)
 	if err != nil {
@@ -155,7 +152,7 @@ func serveStaticFile(w http.ResponseWriter, r *http.Request, contentType string,
 	w.Write(data)
 }
 
-func jsHandler(w http.ResponseWriter, r *http.Request) {
+func javaScriptHandler(w http.ResponseWriter, r *http.Request) {
 	runtime, err := fetchRuntime(getRuntimeFromURL(r.URL.Path))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -165,7 +162,7 @@ func jsHandler(w http.ResponseWriter, r *http.Request) {
 	serveStaticFile(w, r, "application/javascript", []byte(runtime.Script))
 }
 
-func wasmHandler(w http.ResponseWriter, r *http.Request) {
+func webAssemblyHandler(w http.ResponseWriter, r *http.Request) {
 	runtime, err := fetchRuntime(getRuntimeFromURL(r.URL.Path))
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -175,7 +172,7 @@ func wasmHandler(w http.ResponseWriter, r *http.Request) {
 	serveStaticFile(w, r, "application/wasm", []byte(runtime.Binary))
 }
 
-func zipHandler(w http.ResponseWriter, r *http.Request) {
+func bundleHandler(w http.ResponseWriter, r *http.Request) {
 	_, org, repo, release := getOrgRepoReleaseFromURL(r.URL.Path)
 	bundle, err := fetchBundle(org, repo, release)
 	if err != nil {
@@ -228,11 +225,11 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 func main() {
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request) {
 		if strings.HasSuffix(r.URL.Path, ".js") {
-			jsHandler(w, r)
+			javaScriptHandler(w, r)
 		} else if strings.HasSuffix(r.URL.Path, ".wasm") {
-			wasmHandler(w, r)
+			webAssemblyHandler(w, r)
 		} else if strings.HasSuffix(r.URL.Path, ".zip") {
-			zipHandler(w, r)
+			bundleHandler(w, r)
 		} else if strings.HasSuffix(r.URL.Path, ".ico") {
 			faviconHandler(w, r)
 		} else {
