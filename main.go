@@ -244,45 +244,36 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 
 type gzipResponseWriter struct {
 	http.ResponseWriter
-	writer *gzip.Writer
+	io.Writer
 }
 
 func (w *gzipResponseWriter) Write(b []byte) (int, error) {
-	return w.writer.Write(b)
+	return w.Writer.Write(b)
 }
 
-type GzipHandlerFunc func(w http.ResponseWriter, r *http.Request)
+func gzipMiddleware(next http.Handler) http.Handler {
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		w.Header().Set("Content-Encoding", "gzip")
+		w.Header().Set("Vary", "Accept-Encoding")
 
-func (f GzipHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Content-Encoding", "gzip")
-	w.Header().Set("Vary", "Accept-Encoding")
+		w.Header().Set("Cache-Control", "public, max-age=31536000")
+		w.Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
+		w.Header().Set("Last-Modified", time.Now().Format(http.TimeFormat))
+		w.Header().Set("Vary", "Accept-Encoding, User-Agent")
 
-	writer := gzip.NewWriter(w)
-	defer writer.Close()
+		gzipWriter := gzip.NewWriter(w)
+		defer gzipWriter.Close()
 
-	w = &gzipResponseWriter{
-		ResponseWriter: w,
-		writer:         writer,
-	}
+		w = &gzipResponseWriter{ResponseWriter: w, Writer: gzipWriter}
 
-	f(w, r)
-}
-
-type CacheControlHandlerFunc func(w http.ResponseWriter, r *http.Request)
-
-func (f CacheControlHandlerFunc) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
-	w.Header().Set("Last-Modified", time.Now().Format(http.TimeFormat))
-	w.Header().Set("Vary", "Accept-Encoding, User-Agent")
-
-	f(w, r)
+		next.ServeHTTP(w, r)
+	})
 }
 
 func main() {
 	server := &http.Server{
 		Addr: fmt.Sprintf(":%s", os.Getenv("PORT")),
-		Handler: GzipHandlerFunc(CacheControlHandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		Handler: gzipMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
 
 			switch {
