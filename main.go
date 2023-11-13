@@ -85,7 +85,6 @@ func fetchRuntime(runtime string) (Runtime, error) {
 	defer cache.Unlock()
 
 	if cached, ok := cache.runtimes[runtime]; ok {
-		fmt.Printf("Runtime %s found in cache\n", runtime)
 		return cached, nil
 	}
 
@@ -150,6 +149,12 @@ func fetchBundle(org, repo, release string) ([]byte, error) {
 	return body, nil
 }
 
+func serveStaticFile(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
+	w.Header().Set("Cache-Control", "public, max-age=31536000")
+	w.Header().Set("Content-Type", contentType)
+	w.Write(data)
+}
+
 func jsHandler(w http.ResponseWriter, r *http.Request) {
 	runtime, err := fetchRuntime(getRuntimeFromURL(r.URL.Path))
 	if err != nil {
@@ -157,9 +162,7 @@ func jsHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Header().Set("Content-Type", "application/javascript")
-	w.Write([]byte(runtime.Script))
+	serveStaticFile(w, r, "application/javascript", []byte(runtime.Script))
 }
 
 func wasmHandler(w http.ResponseWriter, r *http.Request) {
@@ -169,9 +172,7 @@ func wasmHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Header().Set("Content-Type", "application/wasm")
-	w.Write([]byte(runtime.Binary))
+	serveStaticFile(w, r, "application/wasm", []byte(runtime.Binary))
 }
 
 func zipHandler(w http.ResponseWriter, r *http.Request) {
@@ -182,9 +183,7 @@ func zipHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Cache-Control", "public, max-age=31536000")
-	w.Header().Set("Content-Type", "application/zip")
-	w.Write(bundle)
+	serveStaticFile(w, r, "application/zip", bundle)
 }
 
 func getOrgRepoReleaseFromURL(urlPath string) (string, string, string, string) {
