@@ -58,3 +58,11 @@ jobs:
 
       - name: "Check deployment"
         run: curl -fsS -m 10 --retry 5 -o /dev/null "${{ steps.deploy.outputs.url }}"
+
+      - name: Setup Firebase Hosting
+        uses: firebaseextended/action-hosting-deploy@v0
+        with:
+          repoToken: ${{ secrets.GITHUB_TOKEN }}
+          firebaseServiceAccount: ${{ secrets.GOOGLE_CREDENTIALS }}
+          projectId: ${{ secrets.GCP_PROJECT_ID }}
+          expires: 30d
