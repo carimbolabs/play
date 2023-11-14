@@ -280,7 +280,7 @@ func Middleware(next http.Handler) http.Handler {
 func main() {
 	server := &http.Server{
 		Addr: fmt.Sprintf(":%s", os.Getenv("PORT")),
-		Handler: Middleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			path := r.URL.Path
 
 			switch {
@@ -295,7 +295,7 @@ func main() {
 			default:
 				rootHandler(w, r)
 			}
-		})),
+		}),
 	}
 
 	log.Fatal(server.ListenAndServe())
