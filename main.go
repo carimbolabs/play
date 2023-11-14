@@ -274,10 +274,7 @@ func Middleware(next http.Handler) http.Handler {
 
 		gzipWriter := gzip.NewWriter(w)
 		defer gzipWriter.Close()
-
-		w = &gzipResponseWriter{ResponseWriter: w, Writer: gzipWriter}
-
-		next.ServeHTTP(w, r)
+		next.ServeHTTP(&gzipResponseWriter{ResponseWriter: w, Writer: gzipWriter}, r)
 	})
 }
 
