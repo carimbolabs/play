@@ -5,7 +5,7 @@
   <meta charset="UTF-8" />
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <base href="{{.BaseURL}}">
+  <base href="{{.BaseURL}}" />
   <link rel="preload" href="carimbo.wasm" as="fetch" type="application/wasm" crossorigin />
   <link rel="preload" href="bundle.zip" as="fetch" type="application/zip" crossorigin />
   <title>Carimbo</title>
@@ -14,10 +14,8 @@
     *::before,
     *::after {
       box-sizing: border-box;
-    }
-
-    * {
       margin: 0;
+      padding: 0;
     }
 
     body {
@@ -25,15 +23,15 @@
       -webkit-font-smoothing: antialiased;
     }
 
-    canvas {
-      display: block;
-      max-width: 100%;
-    }
-
     .container {
       display: flex;
       align-items: center;
       justify-content: center;
+    }
+
+    #canvas {
+      width: 1280px;
+      height: 720px;
     }
   </style>
 </head>
