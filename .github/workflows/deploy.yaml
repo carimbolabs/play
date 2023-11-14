@@ -32,6 +32,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Deploy to Cloud Run
+        id: deploy
         run: |
           gcloud config set run/region ${{ secrets.REGION }}
           gcloud run deploy ${{ secrets.SERVICE_NAME }} --source $(pwd) --platform managed --allow-unauthenticated
