@@ -33,10 +33,11 @@ jobs:
 
       - name: Deploy to Cloud Run
         id: deploy
-        run: |
-          gcloud config set run/region ${{ secrets.REGION }}
-          gcloud run deploy ${{ secrets.SERVICE_NAME }} --source $(pwd) --platform managed --allow-unauthenticated
-          gcloud run services update-traffic ${{ secrets.SERVICE_NAME }} --to-latest
+        uses: google-github-actions/deploy-cloudrun@v1
+        with:
+          service: ${{ secrets.SERVICE_NAME }}
+          image: ${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:latest
+          region: ${{ secrets.REGION }}
 
       - name: "Check deployment"
         run: curl -fsS -m 10 --retry 5 -o /dev/null "${{ steps.deploy.outputs.url }}"
