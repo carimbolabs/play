@@ -261,8 +261,7 @@ func (w *gzipResponseWriter) Write(b []byte) (int, error) {
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Encoding", "gzip")
-
-		// w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 		// if toCache.MatchString(r.URL.Path) {
 		// 	w.Header().Set("Cache-Control", "public, max-age=31536000")
 		// 	w.Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
