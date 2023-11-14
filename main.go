@@ -16,6 +16,7 @@ import (
 	"regexp"
 	"strings"
 	"sync"
+	"time"
 )
 
 //go:embed index.html
@@ -258,13 +259,20 @@ func (w *gzipResponseWriter) Write(b []byte) (int, error) {
 
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		isIndexHTML := strings.HasSuffix(r.URL.Path, "index.html")
+
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Set("Vary", "Accept-Encoding")
 
-		// w.Header().Set("Cache-Control", "public, max-age=31536000")
-		// w.Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
-		// w.Header().Set("Last-Modified", time.Now().Format(http.TimeFormat))
-		// w.Header().Set("Vary", "Accept-Encoding, User-Agent")
+		if isIndexHTML {
+			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		} else {
+			w.Header().Set("Cache-Control", "public, max-age=31536000")
+			w.Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
+			w.Header().Set("Last-Modified", time.Now().Format(http.TimeFormat))
+		}
+
+		w.Header().Set("Vary", "Accept-Encoding, User-Agent")
 
 		gzipWriter := gzip.NewWriter(w)
 		defer gzipWriter.Close()
