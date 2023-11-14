@@ -5,6 +5,9 @@ on:
     branches:
       - main
 
+permissions:
+  contents: read
+
 jobs:
   lint:
     runs-on: ubuntu-latest
@@ -12,8 +15,8 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      # - name: Run Lint
-      #   uses: golangci/golangci-lint-action@v3
+      - name: Run Lint
+        uses: golangci/golangci-lint-action@v3
 
   deploy:
     runs-on: ubuntu-latest
@@ -58,12 +61,3 @@ jobs:
 
       - name: "Check deployment"
         run: curl -fsS -m 10 --retry 5 -o /dev/null "${{ steps.deploy.outputs.url }}"
-
-      - name: Setup Firebase Hosting
-        uses: firebaseextended/action-hosting-deploy@v0
-        with:
-          channelID: live
-          repoToken: ${{ secrets.GITHUB_TOKEN }}
-          firebaseServiceAccount: ${{ secrets.GOOGLE_CREDENTIALS }}
-          projectId: ${{ secrets.GCP_PROJECT_ID }}
-          expires: 30d
