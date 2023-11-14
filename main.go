@@ -16,7 +16,6 @@ import (
 	"regexp"
 	"strings"
 	"sync"
-	"time"
 )
 
 type Runtime struct {
@@ -31,9 +30,9 @@ type Cache struct {
 
 var (
 	//go:embed index.html
-	html    []byte
-	cache   Cache
-	toCache = regexp.MustCompile(`\.(zip|wasm|js|ico)$`)
+	html  []byte
+	cache Cache
+	// toCache = regexp.MustCompile(`\.(zip|wasm|js|ico)$`)
 )
 
 func init() {
@@ -264,13 +263,13 @@ func Middleware(next http.Handler) http.Handler {
 		w.Header().Set("Content-Encoding", "gzip")
 		w.Header().Set("Vary", "Accept-Encoding, User-Agent")
 
-		if toCache.MatchString(r.URL.Path) {
-			w.Header().Set("Cache-Control", "public, max-age=31536000")
-			w.Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
-			w.Header().Set("Last-Modified", time.Now().Format(http.TimeFormat))
-		} else {
-			w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-		}
+		// if toCache.MatchString(r.URL.Path) {
+		// 	w.Header().Set("Cache-Control", "public, max-age=31536000")
+		// 	w.Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
+		// 	w.Header().Set("Last-Modified", time.Now().Format(http.TimeFormat))
+		// } else {
+		// 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+		// }
 
 		gzipWriter := gzip.NewWriter(w)
 		defer gzipWriter.Close()
