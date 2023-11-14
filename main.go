@@ -261,7 +261,6 @@ func (w *gzipResponseWriter) Write(b []byte) (int, error) {
 func Middleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Encoding", "gzip")
-		w.Header().Set("Vary", "Accept-Encoding, User-Agent")
 
 		// if toCache.MatchString(r.URL.Path) {
 		// 	w.Header().Set("Cache-Control", "public, max-age=31536000")
@@ -273,6 +272,7 @@ func Middleware(next http.Handler) http.Handler {
 
 		gzipWriter := gzip.NewWriter(w)
 		defer gzipWriter.Close()
+
 		next.ServeHTTP(&gzipResponseWriter{ResponseWriter: w, Writer: gzipWriter}, r)
 	})
 }
