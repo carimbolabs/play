@@ -153,7 +153,7 @@ func fetchBundle(org, repo, release string) ([]byte, error) {
 }
 
 func getOrgRepoReleaseFromURL(urlPath string) (string, string, string, string) {
-	pattern := regexp.MustCompile(`/(?P<runtime>[^/]+)/(?P<org>[^/]+)/(?P<repo>[^/]+)/(?P<release>[^/]+)`)
+	pattern := regexp.MustCompile(`/play/(?P<runtime>[^/]+)/(?P<org>[^/]+)/(?P<repo>[^/]+)/(?P<release>[^/]+)`)
 	match := pattern.FindStringSubmatch(urlPath)
 
 	var runtime, org, repo, release string
