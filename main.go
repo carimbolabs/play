@@ -182,7 +182,13 @@ func getRuntimeFromURL(urlPath string) string {
 
 func serveStaticFile(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
 	w.Header().Set("Content-Type", contentType)
-	w.Write(data)
+
+	_, err := w.Write(data)
+	if err != nil {
+		log.Printf("Error writing response: %v", err)
+		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
+		return
+	}
 }
 
 func javaScriptHandler(w http.ResponseWriter, r *http.Request) {
