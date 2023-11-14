@@ -9,7 +9,7 @@ permissions:
   contents: read
 
 jobs:
-  lint:
+  deploy:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -17,13 +17,6 @@ jobs:
 
       - name: Run Lint
         uses: golangci/golangci-lint-action@v3
-
-  deploy:
-    runs-on: ubuntu-latest
-    needs: lint
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
 
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
@@ -38,26 +31,11 @@ jobs:
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Authenticate Docker
+      - name: Deploy to Cloud Run
         run: |
-          gcloud auth configure-docker --quiet ${{ secrets.REGION }}-docker.pkg.dev
-
-      - name: Build and push
-        uses: docker/build-push-action@v5
-        with:
-          context: .
-          push: true
-          tags: ${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-
-      - name: Deploy
-        id: deploy
-        uses: google-github-actions/deploy-cloudrun@v1
-        with:
-          service: ${{ secrets.SERVICE_NAME }}
-          image: ${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:latest
-          region: ${{ secrets.REGION }}
+          gcloud config set run/region ${{ secrets.REGION }}
+          gcloud run deploy ${{ secrets.SERVICE_NAME }} --source $(pwd) --platform managed --allow-unauthenticated
+          gcloud run services update-traffic ${{ secrets.SERVICE_NAME }} --to-latest
 
       - name: "Check deployment"
         run: curl -fsS -m 10 --retry 5 -o /dev/null "${{ steps.deploy.outputs.url }}"
