@@ -7,19 +7,20 @@ import (
 	"fmt"
 	"html/template"
 	"io"
-	"log"
 	"net/http"
 	"os"
 	"path"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"sync"
+
+	"github.com/labstack/echo/v4"
+	"github.com/labstack/echo/v4/middleware"
 )
 
 type Runtime struct {
-	Script string
-	Binary string
+	Script []byte
+	Binary []byte
 }
 
 type Cache struct {
@@ -91,21 +92,29 @@ func getRuntime(runtime string) (Runtime, error) {
 	}
 
 	url := fmt.Sprintf("https://github.com/carimbolabs/carimbo/releases/download/v%s/WebAssembly.zip", runtime)
-
-	resp, err := http.Get(url)
+	client := http.Client{}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return Runtime{}, fmt.Errorf("HTTP GET error: %w", err)
+		return Runtime{}, fmt.Errorf("http request error: %w", err)
+	}
+
+	req.Header.Add("Accept-Encoding", "gzip")
+	req.Header.Set("Accept", "application/zip")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return Runtime{}, fmt.Errorf("http get error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return Runtime{}, fmt.Errorf("readAll error: %w", err)
+		return Runtime{}, fmt.Errorf("readall error: %w", err)
 	}
 
 	zr, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
 	if err != nil {
-		return Runtime{}, fmt.Errorf("zip.NewReader error: %w", err)
+		return Runtime{}, fmt.Errorf("zip reader error: %w", err)
 	}
 
 	var scriptContent, binaryContent []byte
@@ -114,17 +123,17 @@ func getRuntime(runtime string) (Runtime, error) {
 		case "carimbo.js":
 			scriptContent, err = readFile(file)
 			if err != nil {
-				return Runtime{}, fmt.Errorf("readFile error: %w", err)
+				return Runtime{}, fmt.Errorf("readfile error: %w", err)
 			}
 		case "carimbo.wasm":
 			binaryContent, err = readFile(file)
 			if err != nil {
-				return Runtime{}, fmt.Errorf("readFile error: %w", err)
+				return Runtime{}, fmt.Errorf("readfile error: %w", err)
 			}
 		}
 	}
 
-	rt := Runtime{Script: string(scriptContent), Binary: string(binaryContent)}
+	rt := Runtime{Script: scriptContent, Binary: binaryContent}
 	cache.runtimes[runtime] = rt
 	return rt, nil
 }
@@ -132,104 +141,117 @@ func getRuntime(runtime string) (Runtime, error) {
 func getBundle(org, repo, release string) ([]byte, error) {
 	url := fmt.Sprintf("https://github.com/%s/%s/archive/refs/tags/v%s.zip", org, repo, release)
 
-	resp, err := http.Get(url)
+	client := http.Client{}
+	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
-		return nil, fmt.Errorf("HTTP GET error: %w", err)
+		return nil, fmt.Errorf("http request error: %w", err)
+	}
+
+	req.Header.Add("Accept-Encoding", "gzip")
+	req.Header.Set("Accept", "application/zip")
+
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("http get error: %w", err)
 	}
 	defer resp.Body.Close()
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("readAll error: %w", err)
+		return nil, fmt.Errorf("readall error: %w", err)
 	}
 
 	body, err = stripRootZip(body)
 	if err != nil {
-		return nil, fmt.Errorf("stripRootZip error: %w", err)
+		return nil, fmt.Errorf("strip root zip error: %w", err)
 	}
 
 	return body, nil
 }
 
-func extractReleaseFromURL(urlPath string) (string, string, string, string) {
-	pattern := regexp.MustCompile(`/(?P<runtime>[^/]+)/(?P<org>[^/]+)/(?P<repo>[^/]+)/(?P<release>[^/]+)`)
-	match := pattern.FindStringSubmatch(urlPath)
+type Params struct {
+	Runtime      string `param:"runtime"`
+	Organization string `param:"org"`
+	Repository   string `param:"repo"`
+	Release      string `param:"release"`
+}
 
-	var runtime, org, repo, release string
-	for i, name := range pattern.SubexpNames() {
-		if i != 0 && name != "" {
-			switch name {
-			case "runtime":
-				runtime = match[i]
-			case "org":
-				org = match[i]
-			case "repo":
-				repo = match[i]
-			case "release":
-				release = match[i]
-			}
-		}
+func indexHandler(c echo.Context) error {
+	p := Params{}
+	if err := c.Bind(&p); err != nil {
+		return fmt.Errorf("parse parameters error: %w", err)
 	}
 
-	return runtime, org, repo, release
-}
+	data := struct {
+		BaseURL string
+	}{
+		BaseURL: fmt.Sprintf("/%s/%s/%s/%s/", p.Runtime, p.Organization, p.Repository, p.Release),
+	}
 
-func getRuntimeFromURL(urlPath string) string {
-	runtime, _, _, _ := extractReleaseFromURL(urlPath)
-	return runtime
-}
-
-func serveFile(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
-	w.Header().Set("Content-Type", contentType)
-
-	_, err := w.Write(data)
+	tmpl, err := template.New("index").Parse(string(html))
 	if err != nil {
-		log.Printf("Error writing response: %v", err)
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
+		return fmt.Errorf("parse template error: %w", err)
 	}
+
+	if err := tmpl.Execute(c.Response().Writer, data); err != nil {
+		return fmt.Errorf("execute template error: %w", err)
+	}
+
+	return nil
 }
 
-func javaScriptHandler(w http.ResponseWriter, r *http.Request) {
-	runtime, err := getRuntime(getRuntimeFromURL(r.URL.Path))
+func favIconHandler(c echo.Context) error {
+	return c.Blob(http.StatusOK, "image/x-icon", []byte{})
+}
+
+func javaScriptHandler(c echo.Context) error {
+	p := Params{}
+	if err := c.Bind(&p); err != nil {
+		return fmt.Errorf("parse parameters error: %w", err)
+	}
+
+	runtime, err := getRuntime(p.Runtime)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching runtime: %v", err), http.StatusInternalServerError)
-		return
+		return fmt.Errorf("get runtime error: %w", err)
 	}
 
-	serveFile(w, r, "application/javascript", []byte(runtime.Script))
+	return c.Blob(http.StatusOK, "application/javascript", runtime.Script)
 }
 
-func webAssemblyHandler(w http.ResponseWriter, r *http.Request) {
-	runtime, err := getRuntime(getRuntimeFromURL(r.URL.Path))
+func webAssemblyHandler(c echo.Context) error {
+	p := Params{}
+	if err := c.Bind(&p); err != nil {
+		return fmt.Errorf("parse parameters error: %w", err)
+	}
+
+	runtime, err := getRuntime(p.Runtime)
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error fetching runtime: %v", err), http.StatusInternalServerError)
-		return
+		return fmt.Errorf("get runtime error: %w", err)
 	}
 
-	serveFile(w, r, "application/wasm", []byte(runtime.Binary))
+	return c.Blob(http.StatusOK, "application/wasm", runtime.Binary)
 }
 
-func bundleHandler(w http.ResponseWriter, r *http.Request) {
-	_, org, repo, release := extractReleaseFromURL(r.URL.Path)
-	bundle, err := getBundle(org, repo, release)
+func bundleHandler(c echo.Context) error {
+	p := Params{}
+	if err := c.Bind(&p); err != nil {
+		return fmt.Errorf("parse parameters error: %w", err)
+	}
+
+	bundle, err := getBundle(p.Organization, p.Repository, p.Release)
 	if err != nil {
-		log.Printf("[getBundle]: error %v", err)
-		http.Error(w, fmt.Sprintf("Error fetching bundle: %v", err), http.StatusInternalServerError)
-		return
+		return fmt.Errorf("get bundle error: %w", err)
 	}
 
-	serveFile(w, r, "application/zip", bundle)
-}
-
-func favIconHandler(w http.ResponseWriter, r *http.Request) {
-	serveFile(w, r, "image/x-icon", []byte{})
+	return c.Blob(http.StatusOK, "application/zip", bundle)
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
 	tmpl, err := template.New("index").Parse(string(html))
 	if err != nil {
-		http.Error(w, fmt.Sprintf("Error parsing template: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("parse template error: %v
+
+", err), http.StatusInternalServerError)
 		return
 	}
 
@@ -242,33 +264,20 @@ func rootHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, fmt.Sprintf("Error executing template: %v", err), http.StatusInternalServerError)
+		http.Error(w, fmt.Sprintf("execute template error: %v", err), http.StatusInternalServerError)
 		return
 	}
 }
 
-//
-
 func main() {
-	server := &http.Server{
-		Addr: fmt.Sprintf(":%s", os.Getenv("PORT")),
-		Handler: http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			path := r.URL.Path
+	e := echo.New()
+	e.Pre(middleware.RemoveTrailingSlash())
+	e.Pre(middleware.GzipWithConfig(middleware.GzipConfig{MinLength: 2048}))
+	e.GET("/:runtime/:org/:repo/:release", indexHandler)
+	e.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
+	e.GET("/:runtime/:org/:repo/:release/carimbo.wasm", webAssemblyHandler)
+	e.GET("/:runtime/:org/:repo/:release/bundle.zip", bundleHandler)
+	e.GET("/favicon.ico", favIconHandler)
 
-			switch {
-			case strings.HasSuffix(path, ".js"):
-				javaScriptHandler(w, r)
-			case strings.HasSuffix(path, ".wasm"):
-				webAssemblyHandler(w, r)
-			case strings.HasSuffix(path, ".zip"):
-				bundleHandler(w, r)
-			case strings.HasSuffix(path, ".ico"):
-				favIconHandler(w, r)
-			default:
-				rootHandler(w, r)
-			}
-		}),
-	}
-
-	log.Fatal(server.ListenAndServe())
+	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("PORT"))))
 }
