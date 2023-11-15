@@ -47,7 +47,7 @@ func readFile(file *zip.File) ([]byte, error) {
 	return io.ReadAll(rc)
 }
 
-func stripRootZip(zipData []byte) ([]byte, error) {
+func stripRoot(zipData []byte) ([]byte, error) {
 	reader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create zip reader: %w", err)
@@ -160,7 +160,7 @@ func getBundle(org, repo, release string) ([]byte, error) {
 		return nil, fmt.Errorf("read all error: %w", err)
 	}
 
-	bundle, err := stripRootZip(body)
+	bundle, err := stripRoot(body)
 	if err != nil {
 		return nil, fmt.Errorf("strip root zip error: %w", err)
 	}
