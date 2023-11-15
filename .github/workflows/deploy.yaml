@@ -35,24 +35,53 @@ jobs:
         run: |
           cat <<EOF > nginx.conf
           server {
-              listen 8000;
+              listen 8000 default_server;
               server_name _;
-              gzip on;
 
-              location @proxy {
-                proxy_pass http://127.0.0.1:8888;
+              gzip on;
+              gzip_vary on;
+              gzip_proxied any;
+              gzip_comp_level 6;
+              gzip_buffers 16 8k;
+              gzip_http_version 1.1;
+              gzip_min_length 256;
+              gzip_types
+                  application/javascript
+                  application/wasm
+                  image/webp
+                  text/css
+                  text/plain;
+
+              location ~* \.(?:zip|ico|wasm|js|webp)$ {
+                  access_log off;
+                  log_not_found off;
+                  expires max;
+                  add_header Cache-Control "public";
+                  try_files $uri $uri/ @proxy;
               }
 
               location / {
-                try_files $uri $uri/ @proxy;
+                  try_files $uri $uri/ @proxy;
               }
 
-              location ~* \.(js|wasm|ico|zip)$ {
-                expires 1d;
-                add_header Cache-Control "public";
-                try_files $uri $uri/ @proxy;
+              location @proxy {
+                  proxy_pass http://127.0.0.1:8888;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
+                  proxy_set_header Connection "upgrade";
+                  proxy_set_header Host $host;
+                  proxy_cache_bypass $http_upgrade;
               }
+
+              sendfile on;
+              tcp_nopush on;
+              tcp_nodelay on;
+              keepalive_timeout 65;
+              types_hash_max_size 2048;
+
+              add_header X-Play "v0" always;
           }
+
           EOF
 
       - name: Setup Nginx Secret
