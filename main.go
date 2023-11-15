@@ -3,6 +3,7 @@ package main
 import (
 	"archive/zip"
 	"bytes"
+	"crypto/sha1"
 	_ "embed"
 	"fmt"
 	"html/template"
@@ -159,12 +160,12 @@ func getBundle(org, repo, release string) ([]byte, error) {
 		return nil, fmt.Errorf("read all error: %w", err)
 	}
 
-	body, err = stripRootZip(body)
+	bundle, err := stripRootZip(body)
 	if err != nil {
 		return nil, fmt.Errorf("strip root zip error: %w", err)
 	}
 
-	return body, nil
+	return bundle, nil
 }
 
 type Params struct {
@@ -172,6 +173,14 @@ type Params struct {
 	Organization string `param:"org"`
 	Repository   string `param:"repo"`
 	Release      string `param:"release"`
+}
+
+func (p *Params) Sha1() string {
+	triplet := fmt.Sprintf("v0%s%s%s%s", p.Runtime, p.Organization, p.Repository, p.Release)
+
+	hash := sha1.New()
+	io.WriteString(hash, triplet)
+	return fmt.Sprintf("%x", hash.Sum(nil))
 }
 
 func indexHandler(c echo.Context) error {
@@ -213,6 +222,10 @@ func javaScriptHandler(c echo.Context) error {
 		return fmt.Errorf("get runtime error: %w", err)
 	}
 
+	c.Response().Header().Set("Cache-Control", "max-age=31536000")
+	c.Response().Header().Set("Vary", "Accept-Encoding")
+	c.Response().Header().Set("ETag", p.Sha1())
+
 	return c.Blob(http.StatusOK, "application/javascript", runtime.Script)
 }
 
@@ -227,6 +240,10 @@ func webAssemblyHandler(c echo.Context) error {
 		return fmt.Errorf("get runtime error: %w", err)
 	}
 
+	c.Response().Header().Set("Cache-Control", "max-age=31536000")
+	c.Response().Header().Set("Vary", "Accept-Encoding")
+	c.Response().Header().Set("ETag", p.Sha1())
+
 	return c.Blob(http.StatusOK, "application/wasm", runtime.Binary)
 }
 
@@ -240,6 +257,10 @@ func bundleHandler(c echo.Context) error {
 	if err != nil {
 		return fmt.Errorf("get bundle error: %w", err)
 	}
+
+	c.Response().Header().Set("Cache-Control", "max-age=31536000")
+	c.Response().Header().Set("Vary", "Accept-Encoding")
+	c.Response().Header().Set("ETag", p.Sha1())
 
 	return c.Blob(http.StatusOK, "application/zip", bundle)
 }
