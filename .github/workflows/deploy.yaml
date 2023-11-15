@@ -55,15 +55,17 @@ jobs:
           }
           EOF
 
-      - name: Apply Nginx Configuration
+      - name: Setup Nginx Secret
         env:
           SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
         run: |
-          gcloud secrets create "$SERVICE_NAME_nginx_config" --replication-policy='automatic' --data-file=nginx.conf || \
-            gcloud secrets versions add "$SERVICE_NAME_nginx_config" --data-file=nginx.conf
+          if ! gcloud secrets create "${SERVICE_NAME}_nginx_config" --replication-policy='automatic' --data-file=nginx.conf; then
+            echo "Secret already exists. Adding new version..."
+            gcloud secrets versions add "${SERVICE_NAME}_nginx_config" --data-file=nginx.conf
+          fi
 
           export PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')
-          gcloud secrets add-iam-policy-binding "$SERVICE_NAME_nginx_config" --member=serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com --role='roles/secretmanager.secretAccessor'
+          gcloud secrets add-iam-policy-binding "${SERVICE_NAME}_nginx_config" --member=serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com --role='roles/secretmanager.secretAccessor'
 
       - name: Build and push
         uses: docker/build-push-action@v5
