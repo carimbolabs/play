@@ -58,8 +58,7 @@ jobs:
       - name: Apply Nginx Configuration
         run: |
           gcloud secrets create play_nginx_config --replication-policy='automatic' --data-file=nginx.conf || \
-            gcloud secrets versions add rpc_ --data-file=nginx.conf || \
-            true
+            gcloud secrets versions add play_nginx_config --data-file=nginx.conf
 
           export PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')
           gcloud secrets add-iam-policy-binding play_nginx_config --member=serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com --role='roles/secretmanager.secretAccessor'
