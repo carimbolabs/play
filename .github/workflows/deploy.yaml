@@ -25,66 +25,6 @@ jobs:
         with:
           project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-      # - name: Setup Nginx Secret
-      #   env:
-      #     SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
-      #   run: |
-      #     cat <<EOF > nginx.conf
-      #     server {
-      #         listen 8000 default_server;
-      #         server_name _;
-
-      #         gzip on;
-      #         gzip_vary on;
-      #         gzip_proxied any;
-      #         gzip_comp_level 6;
-      #         gzip_buffers 16 8k;
-      #         gzip_http_version 1.1;
-      #         gzip_min_length 256;
-      #         gzip_types
-      #             application/javascript
-      #             application/wasm
-      #             image/webp
-      #             text/css
-      #             text/plain;
-
-      #         location ~* \.(?:wasm|js|webp)$ {
-      #             access_log off;
-      #             log_not_found off;
-      #             expires max;
-      #             add_header Cache-Control "public";
-      #             try_files $uri $uri/ @proxy;
-      #         }
-
-      #         location / {
-      #             try_files $uri $uri/ @proxy;
-      #         }
-
-      #         location @proxy {
-      #             proxy_pass http://127.0.0.1:8888;
-      #             proxy_http_version 1.1;
-      #             # proxy_set_header Upgrade $http_upgrade;
-      #             # proxy_set_header Connection "upgrade";
-      #             # proxy_set_header Host $host;
-      #             # proxy_cache_bypass $http_upgrade;
-      #         }
-
-      #         sendfile on;
-      #         tcp_nopush on;
-      #         tcp_nodelay on;
-      #         keepalive_timeout 65;
-      #         types_hash_max_size 2048;
-      #     }
-      #     EOF
-
-      #     if ! gcloud secrets create "${SERVICE_NAME}_nginx_config" --replication-policy='automatic' --data-file=nginx.conf; then
-      #       echo "Secret already exists. Adding new version..."
-      #       gcloud secrets versions add "${SERVICE_NAME}_nginx_config" --data-file=nginx.conf
-      #     fi
-
-      #     export PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')
-      #     gcloud secrets add-iam-policy-binding "${SERVICE_NAME}_nginx_config" --member=serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com --role='roles/secretmanager.secretAccessor'
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -100,7 +40,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Setup Sidecar
+      - name: Deploy to Cloud Run
         env:
           SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
           REGION: ${{ secrets.REGION }}
@@ -127,10 +67,3 @@ jobs:
           EOF
 
           gcloud run services replace service.yaml
-
-      # - name: Deploy on Cloud Run
-      #   uses: google-github-actions/deploy-cloudrun@main
-      #   with:
-      #     image: ${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:${{ github.sha }}
-      #     service: ${{ secrets.SERVICE_NAME }}
-      #     region: ${{ secrets.REGION }}
