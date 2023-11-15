@@ -179,7 +179,7 @@ func (p *Params) Sha1() string {
 	triplet := fmt.Sprintf("v1%s%s%s%s", p.Runtime, p.Organization, p.Repository, p.Release)
 
 	hash := sha1.New()
-	////nolint:errcheck
+	//nolint:errcheck
 	io.WriteString(hash, triplet)
 	return fmt.Sprintf("%x", hash.Sum(nil))
 }
