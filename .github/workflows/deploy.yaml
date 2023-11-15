@@ -115,16 +115,17 @@ jobs:
             labels:
               cloud.googleapis.com/location: $REGION
           spec:
-            containers:
-              - image: $REGISTRY/$SERVICE_NAME:$GITHUB_SHA
-                name: play
-                env:
-                  - name: PORT
-                    value: "8000"
-                resources:
-                  limits:
-                    cpu: 4000m
-                    memory: 4Gi
+            spec:
+              containers:
+                - image: $REGISTRY/$SERVICE_NAME:$GITHUB_SHA
+                  name: play
+                  env:
+                    - name: PORT
+                      value: "8000"
+                  resources:
+                    limits:
+                      cpu: 4000m
+                      memory: 4Gi
           EOF
 
           gcloud run services replace service.yaml
