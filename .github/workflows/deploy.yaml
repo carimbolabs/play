@@ -35,7 +35,7 @@ jobs:
         run: |
           cat <<EOF > nginx.conf
           server {
-              listen 8080;
+              listen 8000;
               server_name _;
               gzip on;
 
@@ -91,7 +91,7 @@ jobs:
                     name: nginx
                     ports:
                       - name: http1
-                        containerPort: 8080
+                        containerPort: 8000
                     resources:
                       limits:
                         cpu: 500m
@@ -105,7 +105,7 @@ jobs:
                       periodSeconds: 240
                       failureThreshold: 1
                       tcpSocket:
-                        port: 8080
+                        port: 8000
                   - image: $REGISTRY/$SERVICE_NAME:$GITHUB_SHA
                     name: play
                     env:
