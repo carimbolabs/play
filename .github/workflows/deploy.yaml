@@ -50,7 +50,7 @@ jobs:
           gcloud secrets create nginx_config --replication-policy='automatic' --data-file=nginx.conf
 
           export PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')
-          gcloud secrets add-iam-policy-binding nginx_config --member=serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com --role='roles/secretmanager.secretAccessor'
+          gcloud secrets add-iam-policy-binding nginx_config --member=serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com --role='roles/secretmanager.secretAccessor'
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -65,6 +65,8 @@ jobs:
         env:
           SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
           REGION: ${{ secrets.REGION }}
+          REGISTRY: ${{ secrets.REGISTRY }}
+          GITHUB_SHA: ${{ github.sha }}
         run: |
           cat <<EOF | envsubst > service.yaml
           apiVersion: serving.knative.dev/v1
@@ -81,7 +83,7 @@ jobs:
             template:
               metadata:
                 annotations:
-                  run.googleapis.com/container-dependencies: "{nginx: [hello]}"
+                  run.googleapis.com/container-dependencies: "{nginx: [play]}"
               spec:
                 containers:
                   - image: nginx
@@ -103,8 +105,8 @@ jobs:
                       failureThreshold: 1
                       tcpSocket:
                         port: 8080
-                  - image: us-docker.pkg.dev/cloudrun/container/hello
-                    name: hello
+                  - image: $REGISTRY/$SERVICE_NAME:$GITHUB_SHA
+                    name: play
                     env:
                       - name: PORT
                         value: "8888"
