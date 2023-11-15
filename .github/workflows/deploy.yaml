@@ -29,8 +29,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Authenticate Docker
-        run: |
-          gcloud auth configure-docker --quiet ${{ secrets.REGION }}-docker.pkg.dev
+        run: gcloud auth configure-docker --quiet ${{ secrets.REGION }}-docker.pkg.dev
 
       - name: Nginx Configuration
         run: |
@@ -67,7 +66,7 @@ jobs:
           SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
           REGION: ${{ secrets.REGION }}
         run: |
-          echo <<EOF > | envsubst > service.yaml
+          cat <<EOF | envsubst > service.yaml
           apiVersion: serving.knative.dev/v1
           kind: Service
           metadata:
@@ -120,19 +119,8 @@ jobs:
                       items:
                         - key: latest
                           path: default.conf
-        EOF
+          EOF
 
       - name: Deploy to Cloud Run
         run: |
           gcloud run services replace service.yaml
-
-      # - name: Deploy to Cloud Run
-      #   id: deploy
-      #   uses: google-github-actions/deploy-cloudrun@v1
-      #   with:
-      #     service: ${{ secrets.SERVICE_NAME }}
-      #     image: ${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:${{ github.sha }}
-      #     region: ${{ secrets.REGION }}
-
-      # - name: "Check deployment"
-      #   run: curl -fsS -m 10 --retry 5 -o /dev/null "${{ steps.deploy.outputs.url }}"
