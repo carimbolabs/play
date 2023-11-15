@@ -32,6 +32,27 @@ jobs:
         run: |
           gcloud auth configure-docker --quiet ${{ secrets.REGION }}-docker.pkg.dev
 
+      - name: Nginx Configuration
+        run: |
+          cat <<EOF > nginx.conf
+          server {
+              listen 8080;
+              server_name _;
+              gzip on;
+
+              location / {
+                  proxy_pass   http://127.0.0.1:8888;
+              }
+          }
+          EOF
+
+      - name: Apply Nginx Configuration
+        run: |
+          gcloud secrets create nginx_config --replication-policy='automatic' --data-file=nginx.conf
+
+          export PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')
+          gcloud secrets add-iam-policy-binding nginx_config --member=serviceAccount:$PROJECT_NUMBER-compute@developer.gserviceaccount.com --role='roles/secretmanager.secretAccessor'
+
       - name: Build and push
         uses: docker/build-push-action@v5
         with:
@@ -41,13 +62,77 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Deploy to Cloud Run
-        id: deploy
-        uses: google-github-actions/deploy-cloudrun@v1
-        with:
-          service: ${{ secrets.SERVICE_NAME }}
-          image: ${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:${{ github.sha }}
-          region: ${{ secrets.REGION }}
+      - name: Declare Manifest
+        env:
+          SERVICE_NAME: ${{ secrets.SERVICE_NAME }}
+          REGION: ${{ secrets.REGION }}
+        run: |
+          echo <<EOF > | envsubst > service.yaml
+          apiVersion: serving.knative.dev/v1
+          kind: Service
+          metadata:
+            name: $SERVICE_NAME
+            labels:
+              cloud.googleapis.com/location: $REGION
+            annotations:
+              run.googleapis.com/launch-stage: BETA
+              run.googleapis.com/description: sample tutorial service
+              run.googleapis.com/ingress: all
+          spec:
+            template:
+              metadata:
+                annotations:
+                  run.googleapis.com/container-dependencies: "{nginx: [hello]}"
+              spec:
+                containers:
+                  - image: nginx
+                    name: nginx
+                    ports:
+                      - name: http1
+                        containerPort: 8080
+                    resources:
+                      limits:
+                        cpu: 500m
+                        memory: 256Mi
+                    volumeMounts:
+                      - name: nginx-conf-secret
+                        readOnly: true
+                        mountPath: /etc/nginx/conf.d/
+                    startupProbe:
+                      timeoutSeconds: 240
+                      periodSeconds: 240
+                      failureThreshold: 1
+                      tcpSocket:
+                        port: 8080
+                  - image: us-docker.pkg.dev/cloudrun/container/hello
+                    name: hello
+                    env:
+                      - name: PORT
+                        value: "8888"
+                    resources:
+                      limits:
+                        cpu: 1000m
+                        memory: 512Mi
+                volumes:
+                  - name: nginx-conf-secret
+                    secret:
+                      secretName: nginx_config
+                      items:
+                        - key: latest
+                          path: default.conf
+        EOF
 
-      - name: "Check deployment"
-        run: curl -fsS -m 10 --retry 5 -o /dev/null "${{ steps.deploy.outputs.url }}"
+      - name: Deploy to Cloud Run
+        run: |
+          gcloud run services replace service.yaml
+
+      # - name: Deploy to Cloud Run
+      #   id: deploy
+      #   uses: google-github-actions/deploy-cloudrun@v1
+      #   with:
+      #     service: ${{ secrets.SERVICE_NAME }}
+      #     image: ${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:${{ github.sha }}
+      #     region: ${{ secrets.REGION }}
+
+      # - name: "Check deployment"
+      #   run: curl -fsS -m 10 --retry 5 -o /dev/null "${{ steps.deploy.outputs.url }}"
