@@ -107,7 +107,7 @@ func getRuntime(runtime string) (Runtime, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return Runtime{}, fmt.Errorf("readall error: %w", err)
+		return Runtime{}, fmt.Errorf("read all error: %w", err)
 	}
 
 	zr, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
@@ -156,7 +156,7 @@ func getBundle(org, repo, release string) ([]byte, error) {
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
-		return nil, fmt.Errorf("readall error: %w", err)
+		return nil, fmt.Errorf("read all error: %w", err)
 	}
 
 	body, err = stripRootZip(body)
