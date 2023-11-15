@@ -48,7 +48,7 @@ jobs:
                   text/css
                   text/plain;
 
-              location ~* \.(?:zip|ico|wasm|js|webp)$ {
+              location ~* \.(?:wasm|js|webp)$ {
                   access_log off;
                   log_not_found off;
                   expires max;
@@ -63,8 +63,8 @@ jobs:
 
               location @proxy {
                   proxy_pass http://127.0.0.1:8888;
-                  # proxy_http_version 1.1;
-                  # proxy_set_header Upgrade $http_upgrade;
+                  proxy_http_version 1.1;
+                  proxy_set_header Upgrade $http_upgrade;
                   # proxy_set_header Connection "upgrade";
                   # proxy_set_header Host $host;
                   # proxy_cache_bypass $http_upgrade;
