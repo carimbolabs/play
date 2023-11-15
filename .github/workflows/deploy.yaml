@@ -47,11 +47,11 @@ jobs:
 
       - name: Apply Nginx Configuration
         run: |
-          # gcloud secrets create nginx_config --replication-policy='automatic' --data-file=nginx.conf
-          gcloud secrets versions add nginx_config --data-file=nginx.conf
+          gcloud secrets create play_nginx_config --replication-policy='automatic' --data-file=nginx.conf || \
+            gcloud secrets versions add rpc_ --data-file=nginx.conf
 
           export PROJECT_NUMBER=$(gcloud projects describe $(gcloud config get-value project) --format='value(projectNumber)')
-          gcloud secrets add-iam-policy-binding nginx_config --member=serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com --role='roles/secretmanager.secretAccessor'
+          gcloud secrets add-iam-policy-binding play_nginx_config --member=serviceAccount:${PROJECT_NUMBER}-compute@developer.gserviceaccount.com --role='roles/secretmanager.secretAccessor'
 
       - name: Build and push
         uses: docker/build-push-action@v5
@@ -84,7 +84,7 @@ jobs:
             template:
               metadata:
                 annotations:
-                  run.googleapis.com/container-dependencies: "{nginx: [play]}"
+                  run.googleapis.com/container-dependencies: "{nginx: [rpc]}"
               spec:
                 containers:
                   - image: nginx
@@ -107,7 +107,7 @@ jobs:
                       tcpSocket:
                         port: 8000
                   - image: $REGISTRY/$SERVICE_NAME:$GITHUB_SHA
-                    name: play
+                    name: rpc
                     env:
                       - name: PORT
                         value: "8888"
@@ -118,7 +118,7 @@ jobs:
                 volumes:
                   - name: nginx-conf-secret
                     secret:
-                      secretName: nginx_config
+                      secretName: play_nginx_config
                       items:
                         - key: latest
                           path: default.conf
