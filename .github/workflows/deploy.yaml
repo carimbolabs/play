@@ -39,8 +39,18 @@ jobs:
               server_name _;
               gzip on;
 
+              location @proxy {
+                proxy_pass http://127.0.0.1:8888;
+              }
+
               location / {
-                  proxy_pass   http://127.0.0.1:8888;
+                try_files $uri $uri/ @proxy;
+              }
+
+              location ~* \.(js|wasm|ico|zip)$ {
+                expires 1d;
+                add_header Cache-Control "public";
+                try_files $uri $uri/ @proxy;
               }
           }
           EOF
