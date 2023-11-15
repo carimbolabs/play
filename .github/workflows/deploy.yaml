@@ -170,6 +170,3 @@ jobs:
           image: ${{ secrets.REGISTRY }}/${{ secrets.SERVICE_NAME }}:${{ github.sha }}
           service: ${{ secrets.SERVICE_NAME }}
           region: ${{ secrets.REGION }}
-          revision-suffix: ${{ github.sha }}
-          platform: managed
-          wait: true
