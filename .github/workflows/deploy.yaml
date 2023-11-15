@@ -120,9 +120,6 @@ jobs:
                 containers:
                   - image: $REGISTRY/$SERVICE_NAME:$GITHUB_SHA
                     name: play
-                    env:
-                      - name: PORT
-                        value: "8000"
                     resources:
                       limits:
                         cpu: 4000m
