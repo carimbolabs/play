@@ -9,8 +9,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"path"
-	"path/filepath"
 	"strings"
 	"sync"
 
@@ -244,29 +242,6 @@ func bundleHandler(c echo.Context) error {
 	}
 
 	return c.Blob(http.StatusOK, "application/zip", bundle)
-}
-
-func rootHandler(w http.ResponseWriter, r *http.Request) {
-	tmpl, err := template.New("index").Parse(string(html))
-	if err != nil {
-		http.Error(w, fmt.Sprintf("parse template error: %v
-
-", err), http.StatusInternalServerError)
-		return
-	}
-
-	baseURL := fmt.Sprintf("%s/", strings.TrimRight(filepath.Join("/", path.Clean(r.URL.Path)), "/"))
-
-	data := struct {
-		BaseURL string
-	}{
-		BaseURL: baseURL,
-	}
-
-	if err := tmpl.Execute(w, data); err != nil {
-		http.Error(w, fmt.Sprintf("execute template error: %v", err), http.StatusInternalServerError)
-		return
-	}
 }
 
 func main() {
