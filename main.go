@@ -37,7 +37,7 @@ func init() {
 	cache.runtimes = make(map[string]Runtime)
 }
 
-func readZipFile(file *zip.File) ([]byte, error) {
+func readFile(file *zip.File) ([]byte, error) {
 	rc, err := file.Open()
 	if err != nil {
 		return nil, fmt.Errorf("failed to open zip file: %w", err)
@@ -47,7 +47,7 @@ func readZipFile(file *zip.File) ([]byte, error) {
 	return io.ReadAll(rc)
 }
 
-func removeRootDirFromZip(zipData []byte) ([]byte, error) {
+func stripRootZip(zipData []byte) ([]byte, error) {
 	reader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to create zip reader: %w", err)
@@ -82,7 +82,7 @@ func removeRootDirFromZip(zipData []byte) ([]byte, error) {
 	return modifiedZipBuffer.Bytes(), nil
 }
 
-func fetchRuntime(runtime string) (Runtime, error) {
+func getRuntime(runtime string) (Runtime, error) {
 	cache.Lock()
 	defer cache.Unlock()
 
@@ -112,14 +112,14 @@ func fetchRuntime(runtime string) (Runtime, error) {
 	for _, file := range zr.File {
 		switch file.Name {
 		case "carimbo.js":
-			scriptContent, err = readZipFile(file)
+			scriptContent, err = readFile(file)
 			if err != nil {
-				return Runtime{}, fmt.Errorf("readZipFile error: %w", err)
+				return Runtime{}, fmt.Errorf("readFile error: %w", err)
 			}
 		case "carimbo.wasm":
-			binaryContent, err = readZipFile(file)
+			binaryContent, err = readFile(file)
 			if err != nil {
-				return Runtime{}, fmt.Errorf("readZipFile error: %w", err)
+				return Runtime{}, fmt.Errorf("readFile error: %w", err)
 			}
 		}
 	}
@@ -129,7 +129,7 @@ func fetchRuntime(runtime string) (Runtime, error) {
 	return rt, nil
 }
 
-func fetchBundle(org, repo, release string) ([]byte, error) {
+func getBundle(org, repo, release string) ([]byte, error) {
 	url := fmt.Sprintf("https://github.com/%s/%s/archive/refs/tags/v%s.zip", org, repo, release)
 
 	resp, err := http.Get(url)
@@ -143,15 +143,15 @@ func fetchBundle(org, repo, release string) ([]byte, error) {
 		return nil, fmt.Errorf("readAll error: %w", err)
 	}
 
-	body, err = removeRootDirFromZip(body)
+	body, err = stripRootZip(body)
 	if err != nil {
-		return nil, fmt.Errorf("removeRootDirFromZip error: %w", err)
+		return nil, fmt.Errorf("stripRootZip error: %w", err)
 	}
 
 	return body, nil
 }
 
-func getOrgRepoReleaseFromURL(urlPath string) (string, string, string, string) {
+func extractReleaseFromURL(urlPath string) (string, string, string, string) {
 	pattern := regexp.MustCompile(`/(?P<runtime>[^/]+)/(?P<org>[^/]+)/(?P<repo>[^/]+)/(?P<release>[^/]+)`)
 	match := pattern.FindStringSubmatch(urlPath)
 
@@ -175,11 +175,11 @@ func getOrgRepoReleaseFromURL(urlPath string) (string, string, string, string) {
 }
 
 func getRuntimeFromURL(urlPath string) string {
-	runtime, _, _, _ := getOrgRepoReleaseFromURL(urlPath)
+	runtime, _, _, _ := extractReleaseFromURL(urlPath)
 	return runtime
 }
 
-func serveStaticFile(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
+func serveFile(w http.ResponseWriter, r *http.Request, contentType string, data []byte) {
 	w.Header().Set("Content-Type", contentType)
 
 	_, err := w.Write(data)
@@ -191,39 +191,39 @@ func serveStaticFile(w http.ResponseWriter, r *http.Request, contentType string,
 }
 
 func javaScriptHandler(w http.ResponseWriter, r *http.Request) {
-	runtime, err := fetchRuntime(getRuntimeFromURL(r.URL.Path))
+	runtime, err := getRuntime(getRuntimeFromURL(r.URL.Path))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching runtime: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	serveStaticFile(w, r, "application/javascript", []byte(runtime.Script))
+	serveFile(w, r, "application/javascript", []byte(runtime.Script))
 }
 
 func webAssemblyHandler(w http.ResponseWriter, r *http.Request) {
-	runtime, err := fetchRuntime(getRuntimeFromURL(r.URL.Path))
+	runtime, err := getRuntime(getRuntimeFromURL(r.URL.Path))
 	if err != nil {
 		http.Error(w, fmt.Sprintf("Error fetching runtime: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	serveStaticFile(w, r, "application/wasm", []byte(runtime.Binary))
+	serveFile(w, r, "application/wasm", []byte(runtime.Binary))
 }
 
 func bundleHandler(w http.ResponseWriter, r *http.Request) {
-	_, org, repo, release := getOrgRepoReleaseFromURL(r.URL.Path)
-	bundle, err := fetchBundle(org, repo, release)
+	_, org, repo, release := extractReleaseFromURL(r.URL.Path)
+	bundle, err := getBundle(org, repo, release)
 	if err != nil {
-		log.Printf("[fetchBundle]: error %v", err)
+		log.Printf("[getBundle]: error %v", err)
 		http.Error(w, fmt.Sprintf("Error fetching bundle: %v", err), http.StatusInternalServerError)
 		return
 	}
 
-	serveStaticFile(w, r, "application/zip", bundle)
+	serveFile(w, r, "application/zip", bundle)
 }
 
 func favIconHandler(w http.ResponseWriter, r *http.Request) {
-	serveStaticFile(w, r, "image/x-icon", []byte{})
+	serveFile(w, r, "image/x-icon", []byte{})
 }
 
 func rootHandler(w http.ResponseWriter, r *http.Request) {
