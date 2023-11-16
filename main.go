@@ -273,7 +273,7 @@ func main() {
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.Pre(middleware.GzipWithConfig(middleware.GzipConfig{MinLength: 2048}))
 
-	// g := e.Group("")
+	g := e.Group("/play")
 	e.GET("/:runtime/:org/:repo/:release", indexHandler)
 	e.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
 	e.GET("/:runtime/:org/:repo/:release/carimbo.wasm", webAssemblyHandler)
