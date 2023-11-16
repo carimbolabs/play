@@ -282,23 +282,5 @@ func main() {
 	e.GET("/:runtime/:org/:repo/:release/bundle.zip", bundleHandler)
 	e.GET("/favicon.ico", favIconHandler)
 
-	// apex := e.Group("")
-	// {
-	// 	apex.GET("/:runtime/:org/:repo/:release", indexHandler)
-	// 	apex.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
-	// 	apex.GET("/:runtime/:org/:repo/:release/carimbo.wasm", webAssemblyHandler)
-	// 	apex.GET("/:runtime/:org/:repo/:release/bundle.zip", bundleHandler)
-	// 	apex.GET("/favicon.ico", favIconHandler)
-	// }
-
-	// subdirectory := e.Group("/play")
-	// {
-	// 	subdirectory.GET("/:runtime/:org/:repo/:release", indexHandler)
-	// 	subdirectory.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
-	// 	subdirectory.GET("/:runtime/:org/:repo/:release/carimbo.wasm", webAssemblyHandler)
-	// 	subdirectory.GET("/:runtime/:org/:repo/:release/bundle.zip", bundleHandler)
-	// 	subdirectory.GET("/favicon.ico", favIconHandler)
-	// }
-
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("PORT"))))
 }
