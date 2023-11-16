@@ -12,6 +12,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/labstack/echo/v4"
 	"github.com/labstack/echo/v4/middleware"
@@ -226,7 +227,7 @@ func javaScriptHandler(c echo.Context) error {
 	}
 
 	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
-	c.Response().Header().Set("Vary", "Accept-Encoding")
+	c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
 	c.Response().Header().Set("ETag", p.Sha1())
 
 	return c.Blob(http.StatusOK, "application/javascript", runtime.Script)
@@ -244,7 +245,7 @@ func webAssemblyHandler(c echo.Context) error {
 	}
 
 	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
-	c.Response().Header().Set("Vary", "Accept-Encoding")
+	c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
 	c.Response().Header().Set("ETag", p.Sha1())
 
 	return c.Blob(http.StatusOK, "application/wasm", runtime.Binary)
@@ -262,7 +263,7 @@ func bundleHandler(c echo.Context) error {
 	}
 
 	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
-	c.Response().Header().Set("Vary", "Accept-Encoding")
+	c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
 	c.Response().Header().Set("ETag", p.Sha1())
 
 	return c.Blob(http.StatusOK, "application/zip", bundle)
