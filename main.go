@@ -270,11 +270,35 @@ func main() {
 	e := echo.New()
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.Pre(middleware.GzipWithConfig(middleware.GzipConfig{MinLength: 2048}))
+	e.Use(middleware.ProxyWithConfig(middleware.ProxyConfig{
+		Rewrite: map[string]string{
+			"/play": "/",
+		},
+	}))
+
 	e.GET("/:runtime/:org/:repo/:release", indexHandler)
 	e.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
 	e.GET("/:runtime/:org/:repo/:release/carimbo.wasm", webAssemblyHandler)
 	e.GET("/:runtime/:org/:repo/:release/bundle.zip", bundleHandler)
 	e.GET("/favicon.ico", favIconHandler)
+
+	// apex := e.Group("")
+	// {
+	// 	apex.GET("/:runtime/:org/:repo/:release", indexHandler)
+	// 	apex.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
+	// 	apex.GET("/:runtime/:org/:repo/:release/carimbo.wasm", webAssemblyHandler)
+	// 	apex.GET("/:runtime/:org/:repo/:release/bundle.zip", bundleHandler)
+	// 	apex.GET("/favicon.ico", favIconHandler)
+	// }
+
+	// subdirectory := e.Group("/play")
+	// {
+	// 	subdirectory.GET("/:runtime/:org/:repo/:release", indexHandler)
+	// 	subdirectory.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
+	// 	subdirectory.GET("/:runtime/:org/:repo/:release/carimbo.wasm", webAssemblyHandler)
+	// 	subdirectory.GET("/:runtime/:org/:repo/:release/bundle.zip", bundleHandler)
+	// 	subdirectory.GET("/favicon.ico", favIconHandler)
+	// }
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("PORT"))))
 }
