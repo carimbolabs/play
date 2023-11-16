@@ -30,8 +30,10 @@ type Cache struct {
 
 var (
 	//go:embed index.html
-	html  []byte
-	cache Cache
+	html []byte
+	//go:embed favicon.ico
+	favicon []byte
+	cache   Cache
 )
 
 func init() {
@@ -212,7 +214,7 @@ func indexHandler(c echo.Context) error {
 }
 
 func favIconHandler(c echo.Context) error {
-	return c.Blob(http.StatusOK, "image/x-icon", []byte{})
+	return c.Blob(http.StatusOK, "image/x-icon", favicon)
 }
 
 func javaScriptHandler(c echo.Context) error {
