@@ -193,7 +193,7 @@ func indexHandler(c echo.Context) error {
 	data := struct {
 		BaseURL string
 	}{
-		BaseURL: fmt.Sprintf("/%s/%s/%s/%s/", p.Runtime, p.Organization, p.Repository, p.Release),
+		BaseURL: fmt.Sprintf("/play/%s/%s/%s/%s/", p.Runtime, p.Organization, p.Repository, p.Release),
 	}
 
 	tmpl, err := template.New("index").Parse(string(html))
