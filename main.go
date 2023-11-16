@@ -24,7 +24,7 @@ type Runtime struct {
 }
 
 type Cache struct {
-	sync.Mutex
+	sync.RWMutex
 	runtimes map[string]Runtime
 }
 
