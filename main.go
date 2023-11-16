@@ -271,14 +271,14 @@ func bundleHandler(c echo.Context) error {
 func main() {
 	e := echo.New()
 	e.Pre(middleware.RemoveTrailingSlash())
-	e.Pre(middleware.Rewrite(map[string]string{"/play/*": "/$1"}))
 	e.Pre(middleware.GzipWithConfig(middleware.GzipConfig{MinLength: 2048}))
 
-	e.GET("/:runtime/:org/:repo/:release", indexHandler)
-	e.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
-	e.GET("/:runtime/:org/:repo/:release/carimbo.wasm", webAssemblyHandler)
-	e.GET("/:runtime/:org/:repo/:release/bundle.zip", bundleHandler)
-	e.GET("/favicon.ico", favIconHandler)
+	g := e.Group("/play")
+	g.GET("/:runtime/:org/:repo/:release", indexHandler)
+	g.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
+	g.GET("/:runtime/:org/:repo/:release/carimbo.wasm", webAssemblyHandler)
+	g.GET("/:runtime/:org/:repo/:release/bundle.zip", bundleHandler)
+	g.GET("/favicon.ico", favIconHandler)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("PORT"))))
 }
