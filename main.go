@@ -201,6 +201,8 @@ func indexHandler(c echo.Context) error {
 		return fmt.Errorf("parse template error: %w", err)
 	}
 
+	c.Response().Header().Set("Cache-Control", "public, max-age=300, s-maxage=300")
+
 	if err := tmpl.Execute(c.Response().Writer, data); err != nil {
 		return fmt.Errorf("execute template error: %w", err)
 	}
@@ -223,7 +225,7 @@ func javaScriptHandler(c echo.Context) error {
 		return fmt.Errorf("get runtime error: %w", err)
 	}
 
-	c.Response().Header().Set("Cache-Control", "max-age=31536000")
+	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
 	c.Response().Header().Set("Vary", "Accept-Encoding")
 	c.Response().Header().Set("ETag", p.Sha1())
 
@@ -241,7 +243,7 @@ func webAssemblyHandler(c echo.Context) error {
 		return fmt.Errorf("get runtime error: %w", err)
 	}
 
-	c.Response().Header().Set("Cache-Control", "max-age=31536000")
+	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
 	c.Response().Header().Set("Vary", "Accept-Encoding")
 	c.Response().Header().Set("ETag", p.Sha1())
 
@@ -259,7 +261,7 @@ func bundleHandler(c echo.Context) error {
 		return fmt.Errorf("get bundle error: %w", err)
 	}
 
-	c.Response().Header().Set("Cache-Control", "max-age=31536000")
+	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
 	c.Response().Header().Set("Vary", "Accept-Encoding")
 	c.Response().Header().Set("ETag", p.Sha1())
 
