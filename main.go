@@ -269,12 +269,8 @@ func bundleHandler(c echo.Context) error {
 func main() {
 	e := echo.New()
 	e.Pre(middleware.RemoveTrailingSlash())
+	e.Pre(middleware.Rewrite(map[string]string{"/play/*": "/$1"}))
 	e.Pre(middleware.GzipWithConfig(middleware.GzipConfig{MinLength: 2048}))
-	e.Use(middleware.ProxyWithConfig(middleware.ProxyConfig{
-		Rewrite: map[string]string{
-			"/play": "/",
-		},
-	}))
 
 	e.GET("/:runtime/:org/:repo/:release", indexHandler)
 	e.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
