@@ -212,6 +212,8 @@ func indexHandler(c echo.Context) error {
 }
 
 func favIconHandler(c echo.Context) error {
+	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
+	c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
 	return c.Blob(http.StatusOK, "image/x-icon", []byte{})
 }
 
