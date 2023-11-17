@@ -10,7 +10,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"strings"
 	"sync"
 	"time"
 
@@ -38,51 +37,6 @@ func init() {
 	cache.runtimes = make(map[string]Runtime)
 }
 
-func readFile(file *zip.File) ([]byte, error) {
-	rc, err := file.Open()
-	if err != nil {
-		return nil, fmt.Errorf("failed to open zip file: %w", err)
-	}
-	defer rc.Close()
-
-	return io.ReadAll(rc)
-}
-
-func stripRoot(zipData []byte) ([]byte, error) {
-	reader, err := zip.NewReader(bytes.NewReader(zipData), int64(len(zipData)))
-	if err != nil {
-		return nil, fmt.Errorf("failed to create zip reader: %w", err)
-	}
-
-	var modifiedZipBuffer bytes.Buffer
-	writer := zip.NewWriter(&modifiedZipBuffer)
-
-	for _, file := range reader.File {
-		file.Name = strings.Join(strings.Split(file.Name, "/")[1:], "/")
-
-		destFile, err := writer.Create(file.Name)
-		if err != nil {
-			return nil, fmt.Errorf("failed to create zip file: %w", err)
-		}
-
-		srcFile, err := file.Open()
-		if err != nil {
-			return nil, fmt.Errorf("failed to open zip file: %w", err)
-		}
-		defer srcFile.Close()
-
-		if _, err = io.Copy(destFile, srcFile); err != nil {
-			return nil, fmt.Errorf("failed to copy file contents: %w", err)
-		}
-	}
-
-	if err := writer.Close(); err != nil {
-		return nil, fmt.Errorf("failed to close zip writer: %w", err)
-	}
-
-	return modifiedZipBuffer.Bytes(), nil
-}
-
 func getRuntime(runtime string) (Runtime, error) {
 	cache.Lock()
 	defer cache.Unlock()
@@ -98,9 +52,6 @@ func getRuntime(runtime string) (Runtime, error) {
 		return Runtime{}, fmt.Errorf("http request error: %w", err)
 	}
 
-	req.Header.Add("Accept-Encoding", "gzip")
-	req.Header.Set("Accept", "application/zip")
-
 	resp, err := client.Do(req)
 	if err != nil {
 		return Runtime{}, fmt.Errorf("http get error: %w", err)
@@ -115,6 +66,16 @@ func getRuntime(runtime string) (Runtime, error) {
 	zr, err := zip.NewReader(bytes.NewReader(body), int64(len(body)))
 	if err != nil {
 		return Runtime{}, fmt.Errorf("zip reader error: %w", err)
+	}
+
+	readFile := func(file *zip.File) ([]byte, error) {
+		rc, err := file.Open()
+		if err != nil {
+			return nil, fmt.Errorf("failed to open zip file: %w", err)
+		}
+		defer rc.Close()
+
+		return io.ReadAll(rc)
 	}
 
 	var scriptContent, binaryContent []byte
@@ -139,16 +100,13 @@ func getRuntime(runtime string) (Runtime, error) {
 }
 
 func getBundle(org, repo, release string) ([]byte, error) {
-	url := fmt.Sprintf("https://github.com/%s/%s/archive/refs/tags/v%s.zip", org, repo, release)
+	url := fmt.Sprintf("https://github.com/%s/%s/releases/download/v%s/bundle.7z", org, repo, release)
 
 	client := http.Client{}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("http request error: %w", err)
 	}
-
-	req.Header.Add("Accept-Encoding", "gzip")
-	req.Header.Set("Accept", "application/zip")
 
 	resp, err := client.Do(req)
 	if err != nil {
@@ -161,12 +119,7 @@ func getBundle(org, repo, release string) ([]byte, error) {
 		return nil, fmt.Errorf("read all error: %w", err)
 	}
 
-	bundle, err := stripRoot(body)
-	if err != nil {
-		return nil, fmt.Errorf("strip root zip error: %w", err)
-	}
-
-	return bundle, nil
+	return body, nil
 }
 
 type Params struct {
@@ -268,7 +221,7 @@ func bundleHandler(c echo.Context) error {
 	c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
 	c.Response().Header().Set("ETag", p.Sha1())
 
-	return c.Blob(http.StatusOK, "application/zip", bundle)
+	return c.Blob(http.StatusOK, "application/octet-stream", bundle)
 }
 
 func main() {
@@ -279,7 +232,7 @@ func main() {
 	e.GET("/:runtime/:org/:repo/:release", indexHandler)
 	e.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
 	e.GET("/:runtime/:org/:repo/:release/carimbo.wasm", webAssemblyHandler)
-	e.GET("/:runtime/:org/:repo/:release/bundle.zip", bundleHandler)
+	e.GET("/:runtime/:org/:repo/:release/bundle.7z", bundleHandler)
 	e.GET("/favicon.ico", favIconHandler)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("PORT"))))

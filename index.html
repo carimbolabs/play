@@ -6,7 +6,7 @@
   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <base href="{{.BaseURL}}" />
-  <link rel="preload" href="bundle.zip" as="fetch" type="application/zip" crossorigin />
+  <link rel="preload" href="bundle.7z" as="fetch" type="application/octet-stream" crossorigin />
   <link rel="preload" href="carimbo.wasm" as="fetch" type="application/wasm" crossorigin />
   <title>Carimbo</title>
   <style>
@@ -46,11 +46,11 @@
         canvas,
         noInitialRun: true,
         onRuntimeInitialized: () => {
-          fetch("bundle.zip")
+          fetch("bundle.7z")
             .then((response) => response.arrayBuffer())
             .then((data) => {
               const uint8View = new Uint8Array(data);
-              FS.writeFile("/bundle.zip", uint8View);
+              FS.writeFile("/bundle.7z", uint8View);
               Module.callMain();
             });
         },
