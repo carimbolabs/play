@@ -56,7 +56,7 @@ jobs:
               cloud.googleapis.com/location: $REGION
             annotations:
               run.googleapis.com/execution-environment: gen2
-              run.googleapis.com/startup-cpu-boost: true
+              run.googleapis.com/startup-cpu-boost: "true"
               autoscaling.knative.dev/maxScale: 16
           spec:
             template:
