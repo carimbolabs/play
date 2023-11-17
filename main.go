@@ -34,11 +34,12 @@ var (
 )
 
 func getRuntime(runtime string) (Runtime, error) {
+	url := fmt.Sprintf("https://github.com/carimbolabs/carimbo/releases/download/v%s/WebAssembly.zip", runtime)
+
 	if cached, ok := cache.runtimes.Load(runtime); ok {
 		return cached.(Runtime), nil
 	}
 
-	url := fmt.Sprintf("https://github.com/carimbolabs/carimbo/releases/download/v%s/WebAssembly.zip", runtime)
 	client := http.Client{}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
