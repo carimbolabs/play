@@ -23,8 +23,8 @@ type Runtime struct {
 }
 
 type Cache struct {
-	sync.RWMutex
-	runtimes map[string]Runtime
+	runtimes sync.Map
+	bundles  sync.Map
 }
 
 var (
@@ -33,16 +33,9 @@ var (
 	cache Cache
 )
 
-func init() {
-	cache.runtimes = make(map[string]Runtime)
-}
-
 func getRuntime(runtime string) (Runtime, error) {
-	cache.Lock()
-	defer cache.Unlock()
-
-	if cached, ok := cache.runtimes[runtime]; ok {
-		return cached, nil
+	if cached, ok := cache.runtimes.Load(runtime); ok {
+		return cached.(Runtime), nil
 	}
 
 	url := fmt.Sprintf("https://github.com/carimbolabs/carimbo/releases/download/v%s/WebAssembly.zip", runtime)
@@ -95,12 +88,16 @@ func getRuntime(runtime string) (Runtime, error) {
 	}
 
 	rt := Runtime{Script: scriptContent, Binary: binaryContent}
-	cache.runtimes[runtime] = rt
+	cache.runtimes.Store(runtime, rt)
 	return rt, nil
 }
 
 func getBundle(org, repo, release string) ([]byte, error) {
 	url := fmt.Sprintf("https://github.com/%s/%s/releases/download/v%s/bundle.7z", org, repo, release)
+
+	if cached, ok := cache.bundles.Load(url); ok {
+		return cached.([]byte), nil
+	}
 
 	client := http.Client{}
 	req, err := http.NewRequest(http.MethodGet, url, nil)
@@ -118,6 +115,8 @@ func getBundle(org, repo, release string) ([]byte, error) {
 	if err != nil {
 		return nil, fmt.Errorf("read all error: %w", err)
 	}
+
+	cache.bundles.Store(url, body)
 
 	return body, nil
 }
