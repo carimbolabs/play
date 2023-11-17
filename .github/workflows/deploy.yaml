@@ -61,6 +61,8 @@ jobs:
           spec:
             template:
               spec:
+                containerConcurrency: 64
+                timeoutSeconds: 60
                 containers:
                   - image: $REGISTRY/$SERVICE_NAME:$GITHUB_SHA
                     name: play
