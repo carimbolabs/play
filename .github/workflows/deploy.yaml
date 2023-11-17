@@ -62,8 +62,8 @@ jobs:
                     name: play
                     resources:
                       limits:
-                        cpu: 4000m
-                        memory: 4Gi
+                        cpu: 1000m
+                        memory: 512Mi
           EOF
 
           gcloud run services replace service.yaml
