@@ -10,6 +10,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"sync"
 	"time"
 
@@ -127,10 +128,24 @@ type Params struct {
 	Organization string `param:"org"`
 	Repository   string `param:"repo"`
 	Release      string `param:"release"`
+	Format       string `param:"format"`
 }
 
 func (p *Params) Sha1() string {
-	triplet := fmt.Sprintf("v1%s%s%s%s", p.Runtime, p.Organization, p.Repository, p.Release)
+	var sb strings.Builder
+	sb.WriteString("/")
+	sb.WriteString(p.Runtime)
+	sb.WriteString("/")
+	sb.WriteString(p.Organization)
+	sb.WriteString("/")
+	sb.WriteString(p.Repository)
+	sb.WriteString("/")
+	sb.WriteString(p.Release)
+	sb.WriteString("/")
+	sb.WriteString(p.Format)
+	sb.WriteString("/")
+
+	triplet := sb.String()
 
 	hash := sha1.New()
 	//nolint:errcheck
@@ -144,10 +159,41 @@ func indexHandler(c echo.Context) error {
 		return fmt.Errorf("parse parameters error: %w", err)
 	}
 
+	var sb strings.Builder
+	sb.WriteString("/")
+	sb.WriteString(p.Runtime)
+	sb.WriteString("/")
+	sb.WriteString(p.Organization)
+	sb.WriteString("/")
+	sb.WriteString(p.Repository)
+	sb.WriteString("/")
+	sb.WriteString(p.Release)
+	sb.WriteString("/")
+	sb.WriteString(p.Format)
+	sb.WriteString("/")
+
+	var formats = map[string]struct {
+		width  int
+		height int
+	}{
+		"480p":  {854, 480},
+		"720p":  {1280, 720},
+		"1080p": {1920, 1080},
+	}
+
+	format, ok := formats[p.Format]
+	if !ok {
+		return fmt.Errorf("invalid format: %s", p.Format)
+	}
+
 	data := struct {
 		BaseURL string
+		Width   int
+		Height  int
 	}{
-		BaseURL: fmt.Sprintf("/%s/%s/%s/%s/", p.Runtime, p.Organization, p.Repository, p.Release),
+		BaseURL: sb.String(),
+		Width:   format.width,
+		Height:  format.height,
 	}
 
 	tmpl, err := template.New("index").Parse(string(html))
@@ -229,10 +275,10 @@ func main() {
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.Pre(middleware.GzipWithConfig(middleware.GzipConfig{MinLength: 2048}))
 
-	e.GET("/:runtime/:org/:repo/:release", indexHandler)
-	e.GET("/:runtime/:org/:repo/:release/carimbo.js", javaScriptHandler)
-	e.GET("/:runtime/:org/:repo/:release/carimbo.wasm", webAssemblyHandler)
-	e.GET("/:runtime/:org/:repo/:release/bundle.7z", bundleHandler)
+	e.GET("/:runtime/:org/:repo/:release/:format", indexHandler)
+	e.GET("/:runtime/:org/:repo/:release/:format/carimbo.js", javaScriptHandler)
+	e.GET("/:runtime/:org/:repo/:release/:format/carimbo.wasm", webAssemblyHandler)
+	e.GET("/:runtime/:org/:repo/:release/:format/bundle.7z", bundleHandler)
 	e.GET("/favicon.ico", favIconHandler)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("PORT"))))
