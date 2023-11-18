@@ -133,17 +133,10 @@ type Params struct {
 
 func (p *Params) Sha1() string {
 	var sb strings.Builder
-	sb.WriteString("/")
 	sb.WriteString(p.Runtime)
-	sb.WriteString("/")
 	sb.WriteString(p.Organization)
-	sb.WriteString("/")
 	sb.WriteString(p.Repository)
-	sb.WriteString("/")
 	sb.WriteString(p.Release)
-	sb.WriteString("/")
-	sb.WriteString(p.Format)
-	sb.WriteString("/")
 
 	triplet := sb.String()
 
