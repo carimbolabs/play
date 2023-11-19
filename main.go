@@ -35,7 +35,7 @@ var (
 )
 
 func getRuntime(runtime string) (Runtime, error) {
-	url := fmt.Sprintf("https://github.com/carimbolabs/carimbo/releases/download/v%s/WebAssembly.zip", runtime)
+	url := fmt.Sprintf("https://github.com/chromaberration/carimbo/releases/download/v%s/WebAssembly.zip", runtime)
 
 	if cached, ok := cache.runtimes.Load(runtime); ok {
 		return cached.(Runtime), nil
