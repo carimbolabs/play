@@ -1,13 +1,13 @@
 <!doctype html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <base href="{{.BaseURL}}" />
-  <link rel="preload" href="bundle.7z" as="fetch" type="application/octet-stream" crossorigin />
-  <link rel="preload" href="carimbo.wasm" as="fetch" type="application/wasm" crossorigin />
-  <title>Carimbo</title>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <base href="{{ .BaseURL }}" />
+    <link rel="icon" href="favicon.ico" />
+    <link rel="preload" href="bundle.7z" as="fetch" type="application/octet-stream" crossorigin />
+    <link rel="preload" href="carimbo.wasm" as="fetch" type="application/wasm" crossorigin />
+    <title>Carimbo</title>
   <style>
     *,
     *::before,
@@ -23,7 +23,14 @@
     }
 
     .container {
-      overflow: hidden;
+      position: absolute;
+      width: {{.Width}}px;
+      height: {{.Height}}px;
+      left: 0;
+      right: 0;
+      top: 0;
+      bottom: 0;
+      margin: auto;
       display: flex;
       align-items: center;
       justify-content: center;
@@ -32,32 +39,61 @@
     #canvas {
       width: {{.Width}}px;
       height: {{.Height}}px;
+      display: block;
+    }
+
+    #spinner {
+      width: 128px;
+      height: 128px;
+      position: absolute;
+      top: calc(50% - 64px);
+      left: calc(50% - 64px);
+      visibility: hidden;
+      transform: translate(-50%, -50%);
+      animation: spin 1s infinite linear;
+    }
+
+    #spinner.display {
+      visibility: visible;
+    }
+
+    @keyframes spin {
+      from {
+        transform: rotate(0deg);
+      }
+
+      to {
+        transform: rotate(360deg);
+      }
     }
   </style>
-</head>
+  </head>
 
-<body>
-  <div class="container">
-    <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
-    <script>
-      const canvas = document.getElementById("canvas");
+  <body>
+    <div class="container">
+      <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
+      <img id="spinner" src="assets/spinner.webp" />
+      <script>
+        const spinner = document.getElementById("spinner");
+        spinner.classList.add("display");
+        const canvas = document.getElementById("canvas");
 
-      var Module = {
-        canvas,
-        noInitialRun: true,
-        onRuntimeInitialized: () => {
-          fetch("bundle.7z")
-            .then((response) => response.arrayBuffer())
-            .then((data) => {
-              const uint8View = new Uint8Array(data);
-              FS.writeFile("/bundle.7z", uint8View);
-              Module.callMain();
-            });
-        },
-      };
-    </script>
-    <script src="carimbo.js"></script>
-  </div>
-</body>
-
+        var Module = {
+          canvas,
+          noInitialRun: true,
+          onRuntimeInitialized: () => {
+            fetch("bundle.7z")
+              .then((response) => response.arrayBuffer())
+              .then((data) => {
+                const uint8View = new Uint8Array(data);
+                FS.writeFile("/bundle.7z", uint8View);
+                Module.callMain();
+                spinner.classList.remove("display");
+              });
+          },
+        };
+      </script>
+      <script src="carimbo.js"></script>
+    </div>
+  </body>
 </html>

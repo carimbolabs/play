@@ -4,10 +4,11 @@ import (
 	"archive/zip"
 	"bytes"
 	"crypto/sha1"
-	_ "embed"
+	"embed"
 	"fmt"
 	"html/template"
 	"io"
+	"io/fs"
 	"net/http"
 	"os"
 	"strings"
@@ -30,8 +31,10 @@ type Cache struct {
 
 var (
 	//go:embed index.html
-	html  []byte
-	cache Cache
+	html []byte
+	//go:embed assets
+	assets embed.FS
+	cache  Cache
 )
 
 func getRuntime(runtime string) (Runtime, error) {
@@ -220,9 +223,15 @@ func javaScriptHandler(c echo.Context) error {
 		return fmt.Errorf("get runtime error: %w", err)
 	}
 
+	etag := p.Sha1()
+
+	if c.Request().Header.Get("If-None-Match") == etag {
+		return c.NoContent(http.StatusNotModified)
+	}
+
 	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
 	c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
-	c.Response().Header().Set("ETag", p.Sha1())
+	c.Response().Header().Set("ETag", etag)
 
 	return c.Blob(http.StatusOK, "application/javascript", runtime.Script)
 }
@@ -238,9 +247,15 @@ func webAssemblyHandler(c echo.Context) error {
 		return fmt.Errorf("get runtime error: %w", err)
 	}
 
+	etag := p.Sha1()
+
+	if c.Request().Header.Get("If-None-Match") == etag {
+		return c.NoContent(http.StatusNotModified)
+	}
+
 	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
 	c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
-	c.Response().Header().Set("ETag", p.Sha1())
+	c.Response().Header().Set("ETag", etag)
 
 	return c.Blob(http.StatusOK, "application/wasm", runtime.Binary)
 }
@@ -256,11 +271,59 @@ func bundleHandler(c echo.Context) error {
 		return fmt.Errorf("get bundle error: %w", err)
 	}
 
+	etag := p.Sha1()
+
+	if c.Request().Header.Get("If-None-Match") == etag {
+		return c.NoContent(http.StatusNotModified)
+	}
+
 	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
 	c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
-	c.Response().Header().Set("ETag", p.Sha1())
+	c.Response().Header().Set("ETag", etag)
 
 	return c.Blob(http.StatusOK, "application/octet-stream", bundle)
+}
+
+func assetsHandler(static fs.FS) echo.HandlerFunc {
+	return func(c echo.Context) error {
+		path := c.Param("*")
+		f, err := static.Open(fmt.Sprintf("assets/%s", path))
+		if err != nil {
+			if os.IsNotExist(err) {
+				return echo.NotFoundHandler(c)
+			}
+			return fmt.Errorf("error opening file: %w", err)
+		}
+		defer f.Close()
+
+		content, err := io.ReadAll(f)
+		if err != nil {
+			return fmt.Errorf("error reading file: %w", err)
+		}
+
+		h := sha1.New()
+		if _, err := h.Write(content); err != nil {
+			return fmt.Errorf("error computing SHA1: %w", err)
+		}
+
+		etag := fmt.Sprintf(`"%x"`, h.Sum(nil))
+
+		c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
+		c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
+		c.Response().Header().Set("ETag", etag)
+
+		if c.Request().Header.Get("If-None-Match") == etag {
+			return c.NoContent(http.StatusNotModified)
+		}
+
+		c.Response().Header().Set(echo.HeaderContentType, http.DetectContentType(content))
+		c.Response().WriteHeader(http.StatusOK)
+		if _, err = c.Response().Write(content); err != nil {
+			return fmt.Errorf("error writing response: %w", err)
+		}
+
+		return nil
+	}
 }
 
 func main() {
@@ -272,6 +335,7 @@ func main() {
 	e.GET("/:runtime/:org/:repo/:release/:format/carimbo.js", javaScriptHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/carimbo.wasm", webAssemblyHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/bundle.7z", bundleHandler)
+	e.GET("/:runtime/:org/:repo/:release/:format/assets/*", assetsHandler(assets))
 	e.GET("/favicon.ico", favIconHandler)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("PORT"))))
