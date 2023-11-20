@@ -306,15 +306,15 @@ func assetsHandler(static fs.FS) echo.HandlerFunc {
 			return fmt.Errorf("error computing SHA1: %w", err)
 		}
 
-		etag := fmt.Sprintf(`"%x"`, h.Sum(nil))
-
-		c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
-		c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
-		c.Response().Header().Set("ETag", etag)
+		etag := fmt.Sprintf("%x", h.Sum(nil))
 
 		if c.Request().Header.Get("If-None-Match") == etag {
 			return c.NoContent(http.StatusNotModified)
 		}
+
+		c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
+		c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
+		c.Response().Header().Set("ETag", etag)
 
 		c.Response().Header().Set(echo.HeaderContentType, http.DetectContentType(content))
 		c.Response().WriteHeader(http.StatusOK)

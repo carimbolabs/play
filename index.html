@@ -40,6 +40,13 @@
       width: {{.Width}}px;
       height: {{.Height}}px;
       display: block;
+      opacity: 0;
+      animation: fadeIn 3s ease forwards;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
     }
 
     #spinner {
