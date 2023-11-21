@@ -51,14 +51,10 @@ func getRuntime(runtime string) (Runtime, error) {
 	}
 
 	resp, err := client.Do(req)
-	if err != nil {
+	if err != nil || resp == nil {
 		return Runtime{}, fmt.Errorf("http get error: %w", err)
 	}
 	defer resp.Body.Close()
-
-	if (resp == nil) || (resp.StatusCode != http.StatusOK) {
-		return Runtime{}, fmt.Errorf("http status error: %d", resp.StatusCode)
-	}
 
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
