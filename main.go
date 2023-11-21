@@ -56,6 +56,10 @@ func getRuntime(runtime string) (Runtime, error) {
 	}
 	defer resp.Body.Close()
 
+	if (resp == nil) || (resp.StatusCode != http.StatusOK) {
+		return Runtime{}, fmt.Errorf("http status error: %d", resp.StatusCode)
+	}
+
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return Runtime{}, fmt.Errorf("read all error: %w", err)
