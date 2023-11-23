@@ -51,7 +51,7 @@ func getRuntime(runtime string) (Runtime, error) {
 	}
 
 	resp, err := client.Do(req)
-	if err != nil || resp == nil {
+	if err != nil {
 		return Runtime{}, fmt.Errorf("http get error: %w", err)
 	}
 	defer resp.Body.Close()
