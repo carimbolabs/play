@@ -335,8 +335,8 @@ func main() {
 	e.GET("/:runtime/:org/:repo/:release/:format/carimbo.js", javaScriptHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/carimbo.wasm", webAssemblyHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/bundle.7z", bundleHandler)
+	e.GET("/:runtime/:org/:repo/:release/:format/favicon.ico", favIconHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/assets/*", assetsHandler(assets))
-	e.GET("/favicon.ico", favIconHandler)
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("PORT"))))
 }
