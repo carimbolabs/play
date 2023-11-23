@@ -209,7 +209,7 @@ func indexHandler(c echo.Context) error {
 func favIconHandler(c echo.Context) error {
 	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
 	c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
-	return c.Blob(http.StatusOK, "image/x-icon", []byte{})
+	return c.Blob(http.StatusOK, "image/svg+xml", []byte{})
 }
 
 func javaScriptHandler(c echo.Context) error {
@@ -335,7 +335,7 @@ func main() {
 	e.GET("/:runtime/:org/:repo/:release/:format/carimbo.js", javaScriptHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/carimbo.wasm", webAssemblyHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/bundle.7z", bundleHandler)
-	e.GET("/:runtime/:org/:repo/:release/:format/favicon.ico", favIconHandler)
+	e.GET("/:runtime/:org/:repo/:release/:format/favicon.svg", favIconHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/assets/*", assetsHandler(assets))
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("PORT"))))
