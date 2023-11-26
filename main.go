@@ -32,8 +32,6 @@ type Cache struct {
 var (
 	//go:embed index.html
 	html []byte
-	//go:embed favicon.svg
-	favicon []byte
 	//go:embed assets
 	assets embed.FS
 	cache  Cache
@@ -208,12 +206,6 @@ func indexHandler(c echo.Context) error {
 	return nil
 }
 
-func favIconHandler(c echo.Context) error {
-	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
-	c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
-	return c.Blob(http.StatusOK, "image/svg+xml", favicon)
-}
-
 func javaScriptHandler(c echo.Context) error {
 	p := Params{}
 	if err := c.Bind(&p); err != nil {
@@ -337,7 +329,6 @@ func main() {
 	e.GET("/:runtime/:org/:repo/:release/:format/carimbo.js", javaScriptHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/carimbo.wasm", webAssemblyHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/bundle.7z", bundleHandler)
-	e.GET("/:runtime/:org/:repo/:release/:format/favicon.svg", favIconHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/assets/*", assetsHandler(assets))
 
 	e.Logger.Fatal(e.Start(fmt.Sprintf(":%s", os.Getenv("PORT"))))
