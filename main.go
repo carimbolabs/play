@@ -32,6 +32,8 @@ type Cache struct {
 var (
 	//go:embed index.html
 	html []byte
+	//go:embed favicon.svg
+	favicon []byte
 	//go:embed assets
 	assets embed.FS
 	cache  Cache
@@ -209,7 +211,7 @@ func indexHandler(c echo.Context) error {
 func favIconHandler(c echo.Context) error {
 	c.Response().Header().Set("Cache-Control", "public, max-age=31536000, s-maxage=31536000")
 	c.Response().Header().Set("Expires", time.Now().AddDate(1, 0, 0).Format(http.TimeFormat))
-	return c.Blob(http.StatusOK, "image/svg+xml", []byte{})
+	return c.Blob(http.StatusOK, "image/svg+xml", favicon)
 }
 
 func javaScriptHandler(c echo.Context) error {
