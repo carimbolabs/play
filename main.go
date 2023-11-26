@@ -322,6 +322,7 @@ func assetsHandler(static fs.FS) echo.HandlerFunc {
 
 func main() {
 	e := echo.New()
+	e.Pre(middleware.Recover())
 	e.Pre(middleware.RemoveTrailingSlash())
 	e.Pre(middleware.GzipWithConfig(middleware.GzipConfig{MinLength: 2048}))
 
