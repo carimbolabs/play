@@ -324,7 +324,7 @@ func main() {
 	e := echo.New()
 	e.Pre(middleware.Recover())
 	e.Pre(middleware.RemoveTrailingSlash())
-	e.Pre(middleware.GzipWithConfig(middleware.GzipConfig{MinLength: 2048}))
+	e.Pre(middleware.GzipWithConfig(middleware.GzipConfig{MinLength: 3072}))
 
 	e.GET("/:runtime/:org/:repo/:release/:format", indexHandler)
 	e.GET("/:runtime/:org/:repo/:release/:format/carimbo.js", javaScriptHandler)
