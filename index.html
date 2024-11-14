@@ -52,29 +52,17 @@
       to { opacity: 1; }
     }
 
-    #spinner {
+    #hourglass {
       width: 128px;
       height: 128px;
       position: absolute;
       top: calc(50% - 64px);
       left: calc(50% - 64px);
       visibility: hidden;
-      transform: translate(-50%, -50%);
-      animation: spin 1s infinite linear;
     }
 
-    #spinner.display {
+    #hourglass.display {
       visibility: visible;
-    }
-
-    @keyframes spin {
-      from {
-        transform: rotate(0deg);
-      }
-
-      to {
-        transform: rotate(360deg);
-      }
     }
   </style>
   </head>
@@ -82,10 +70,10 @@
   <body>
     <div class="container">
       <canvas id="canvas" oncontextmenu="event.preventDefault()"></canvas>
-      <img id="spinner" src="assets/hourglass.webp" />
+      <img id="hourglass" src="assets/hourglass.webp" />
       <script>
-        const spinner = document.getElementById("spinner");
-        spinner.classList.add("display");
+        const hourglass = document.getElementById("hourglass");
+        hourglass.classList.add("display");
         const canvas = document.getElementById("canvas");
 
         var Module = {
@@ -98,7 +86,7 @@
                 const uint8View = new Uint8Array(data);
                 FS.writeFile("/bundle.7z", uint8View);
                 Module.callMain();
-                spinner.classList.remove("display");
+                hourglass.classList.remove("display");
               });
           },
         };
