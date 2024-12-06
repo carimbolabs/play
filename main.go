@@ -104,7 +104,7 @@ func getBundle(org, repo, release string) ([]byte, error) {
 		return cached.([]byte), nil
 	}
 
-	client := http.Client{}
+	client := http.DefaultClient
 	req, err := http.NewRequest(http.MethodGet, url, nil)
 	if err != nil {
 		return nil, fmt.Errorf("http request error: %w", err)
